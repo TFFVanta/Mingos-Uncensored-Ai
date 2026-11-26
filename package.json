@@ -9,7 +9,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test tests/",
+    "test": "node --test \"tests/*.test.mjs\"",
     "check": "node --check server.js && node --check sandbox-worker.js"
   },
   "engines": {
