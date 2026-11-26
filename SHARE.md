@@ -58,6 +58,11 @@ explain each clip. To download a file, open it on GitHub and choose "Download ra
 >
 > https://github.com/TFFVanta/Mingos-Uncensored-Ai
 
+**Best as a video post:** choose "Images & Video", upload [docs/clips/swarm.mp4](docs/clips/swarm.mp4) (or
+[full-demo.mp4](docs/clips/full-demo.mp4)) with the title above, pick the "Resources" or "Other" flair, then
+paste the post text as your first comment. Add this line to it: *The video is real use; waiting time is
+sped up and marked. You'll see one tool call fail and get flagged before the team reaches the right answer.*
+
 ---
 
 ## Reddit: r/selfhosted
