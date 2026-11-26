@@ -7,10 +7,68 @@
 > **Using this software means agreeing to the [Terms of Use](TERMS.md) and [Acceptable Use Policy](ACCEPTABLE_USE.md).**
 > The models are uncensored, and you're responsible for what you create. Sexual images of minors are always blocked.
 
-A private AI chat app that runs entirely on your own Windows PC. It uses uncensored (abliterated)
-language models through [Ollama](https://ollama.com), with agent swarms, picture making, voice and a
-document library. Nothing leaves your machine unless you turn on a feature that goes online
-(web search, reading web pages, or online voice typing).
+## About
+
+**Mingo's Uncensored AI is a private, all-in-one AI workspace that runs entirely on your own Windows PC,
+using open models that answer you directly instead of refusing.**
+
+It brings together, in one desktop app, what usually takes several online services: a chat assistant,
+a team of AI agents that can research, write code and use tools, a picture generator, a searchable
+library of your own documents, and voice input and output. Everything runs on your hardware. There
+are no accounts, no subscriptions, no usage limits and no company reading your conversations.
+
+### Why it exists
+
+Most AI assistants run on someone else's servers, under someone else's rules. Your prompts are stored,
+reviewed or used for training, and the assistant decides what you may ask about. That's fine for many
+people, but it's a poor fit if you:
+
+- **care about privacy**: confidential work, personal matters, journaling, health questions, client
+  material, or anything you'd rather not send to a cloud company;
+- **want straight answers** on subjects mainstream assistants hedge on or refuse: medicine and drugs,
+  law, security research, sexuality, history, politics, or dark themes in fiction;
+- **want control**: pick your own models, see exactly what the AI was told, keep working offline, and
+  never lose access because a service changed its policy or its price.
+
+Mingo's Uncensored AI was created by Mingo to give people that: a capable assistant that's entirely
+yours.
+
+### What "uncensored AI" means
+
+Modern language models are usually trained twice: first to understand language and knowledge, then
+"aligned" to follow company policies, which includes learning to **refuse** certain requests. Those
+refusals are often useful, but they also misfire: assistants turn down harmless requests, moralize,
+add disclaimers nobody asked for, or won't touch fiction, research or frank questions that are
+perfectly legitimate.
+
+An **uncensored** model has those trained-in refusals removed or reduced. The models this app uses by
+default are **"abliterated"**. Researchers found that a model's tendency to refuse is mostly carried by
+a single direction in its internal activations. Abliteration finds that "refusal direction" and
+removes it from the model's weights. The result keeps the original model's knowledge and skills, but
+it no longer refuses requests or lectures you: it just answers.
+
+**What it does mean:**
+- Direct answers without refusals, lectures or unnecessary warnings
+- Fiction and roleplay that can go wherever the story needs, including dark or adult themes
+- Frank discussion of sensitive topics: medical, legal, security, sexual, controversial
+- Instructions in your presets and prompts are followed instead of second-guessed
+
+**What it doesn't mean:**
+- **Not smarter or more accurate.** An uncensored model knows exactly what the original model knew.
+  It can still be wrong, make things up or be out of date.
+- **Not lawless.** Removing a model's refusals doesn't change the law, and you're responsible for what
+  you create and do with it. See the [Acceptable Use Policy](ACCEPTABLE_USE.md).
+- **Not without any limits.** The app keeps one hard limit of its own: it will never generate sexual
+  images involving minors.
+- **Not a judgment-free advisor.** Without refusals, the model won't stop you from a bad idea.
+  For decisions that matter, check with a qualified person.
+
+### Who it's for
+
+Writers and roleplayers who want a creative partner without guardrails getting in the way. Developers
+and security researchers who want an assistant that discusses their work frankly. Researchers,
+students and curious people who want direct answers. Anyone who wants an AI that's private by design.
+It's for adults (18+) only.
 
 ## Features
 

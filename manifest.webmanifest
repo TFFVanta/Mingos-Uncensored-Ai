@@ -1,7 +1,7 @@
 {
   "name": "Mingo's Uncensored AI",
   "short_name": "Mingo's Uncensored AI",
-  "description": "Private AI chat running on your own PC",
+  "description": "Private, all-in-one uncensored AI workspace that runs entirely on your own PC",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#111317",
