@@ -1,0 +1,16 @@
+{
+  "name": "mingos-uncensored-ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mingo's Uncensored AI: a private AI chat app that runs on your own PC",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "playwright-core": "1.65.1",
+    "tesseract.js": "7.0.0",
+    "tesseract.js-core": "6.1.2"
+  }
+}

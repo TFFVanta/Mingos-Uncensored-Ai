@@ -1,0 +1,2882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Local Chat</title>
+<link rel="icon" href="/icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<style>
+  :root {
+    --bg: #111317; --panel: #181b21; --panel2: #1f232b; --line: #2a2f39; --code: #0b0d10;
+    --text: #e6e8ec; --muted: #8b93a3; --accent: #6ea8fe; --user: #243049; --danger: #e5707a; --ok: #6fcf97; --warn: #f2c94c;
+    --fs: 15px; --width: 820px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { font: var(--fs)/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); display: flex; overflow: hidden; }
+  button, select, textarea, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  button:disabled { opacity: .45; cursor: default; }
+  select, input[type=number], input[type=text], input[type=search], textarea {
+    background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px;
+  }
+  select:focus, input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  [hidden] { display: none !important; }
+
+  /* sidebar */
+  aside { width: 260px; flex-shrink: 0; background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; }
+  .new { margin: 12px 12px 8px; padding: 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel2); }
+  .new:hover { border-color: var(--accent); }
+  .search { padding: 0 12px 8px; }
+  .search input { width: 100%; }
+  #convos { flex: 1; overflow-y: auto; padding: 0 8px 8px; }
+  .group { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 10px 10px 4px; }
+  .convo { display: flex; align-items: center; gap: 2px; padding: 7px 8px 7px 10px; border-radius: 6px; cursor: pointer; color: var(--muted); }
+  .convo:hover { background: var(--panel2); }
+  .convo.active { background: var(--panel2); color: var(--text); }
+  .convo span { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .convo button { background: none; border: 0; color: var(--muted); opacity: 0; padding: 0 3px; font-size: 13px; }
+  .convo:hover button, .convo button.pinned { opacity: 1; }
+  .convo button.pinned { filter: none; }
+  .convo button:not(.pinned)[data-pin] { filter: grayscale(1); }
+  .convo button[data-del]:hover { color: var(--danger); }
+  .side-foot { border-top: 1px solid var(--line); padding: 10px 12px; }
+
+  /* main */
+  main { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
+  header { display: flex; gap: 10px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  header label { color: var(--muted); font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  header select { max-width: 230px; }
+  input[type=number] { width: 64px; }
+  .ghost { background: none; border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; color: var(--muted); }
+  .ghost:hover:not(:disabled) { color: var(--text); border-color: var(--accent); }
+  .ghost.on { color: var(--text); border-color: var(--accent); }
+  .ghost.danger:hover:not(:disabled) { color: var(--danger); border-color: var(--danger); }
+  .ghost.sm { padding: 1px 8px; font-size: 12px; }
+  .primary { background: var(--accent); color: #0b1220; border: 0; border-radius: 6px; padding: 5px 12px; font-weight: 600; }
+  #system { display: none; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+  #system.open { display: block; }
+  #system textarea { width: 100%; min-height: 70px; resize: vertical; }
+  #system small { color: var(--muted); }
+
+  #messages { flex: 1; overflow-y: auto; padding: 20px 0; }
+  .msg { max-width: var(--width); margin: 0 auto 14px; padding: 0 20px; display: flex; flex-direction: column; align-items: flex-start; }
+  .msg.user { align-items: flex-end; }
+  .msg.wide { max-width: calc(var(--width) + 420px); }
+  .bubble { padding: 10px 14px; border-radius: 12px; max-width: 100%; overflow-wrap: anywhere; min-width: 0; }
+  .msg.user .bubble { background: var(--user); white-space: pre-wrap; }
+  .msg.assistant .bubble { background: transparent; padding-left: 0; width: 100%; }
+  .bubble p { margin: 0 0 10px; } .bubble p:last-child { margin-bottom: 0; }
+  .bubble ul, .bubble ol { margin: 0 0 10px; padding-left: 22px; }
+  .codewrap { position: relative; margin: 0 0 10px; }
+  .codewrap pre { background: var(--code); border: 1px solid var(--line); border-radius: 8px; padding: 10px; overflow-x: auto; margin: 0; }
+  .copy { position: absolute; top: 6px; right: 6px; font-size: 12px; padding: 2px 8px; border-radius: 5px; border: 1px solid var(--line); background: var(--panel2); color: var(--muted); }
+  .copy:hover { color: var(--text); }
+  .bubble code { font-family: ui-monospace, Consolas, monospace; font-size: 0.9em; }
+  .bubble :not(pre) > code { background: var(--panel2); padding: 1px 5px; border-radius: 4px; }
+  details.think, details.orig { color: var(--muted); font-size: 0.9em; border-left: 2px solid var(--line); padding-left: 10px; margin-bottom: 10px; white-space: pre-wrap; }
+  details summary { cursor: pointer; }
+  .gate { display: inline-block; font-size: 12px; margin-top: 8px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .gate.pass { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
+  .gate.revised { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+  .error { color: var(--danger); }
+  .acts { display: flex; gap: 4px; margin-top: 4px; opacity: 0; transition: opacity .15s; }
+  .msg:hover .acts, .acts:focus-within { opacity: 1; }
+  .acts button { background: none; border: 1px solid transparent; border-radius: 6px; color: var(--muted); font-size: 12px; padding: 2px 7px; }
+  .acts button:hover:not(:disabled) { border-color: var(--line); color: var(--text); }
+  .editing { width: min(100%, 640px); }
+  .editbox { width: 100%; min-height: 90px; resize: vertical; background: var(--bg); }
+  .row.end { justify-content: flex-end; margin-top: 6px; }
+  .atts { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; white-space: normal; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; max-width: 240px; }
+  .chip span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .chip button { background: none; border: 0; color: var(--muted); padding: 0; }
+  .thumb { width: 84px; height: 84px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .cmp { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+  .cmp.chosen { border-color: var(--accent); }
+  .cmphead { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; font-size: 13px; }
+  .cmphead b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cmpstat { font-size: 11.5px; color: var(--muted); margin-top: 8px; }
+  .tag { font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+  .tag.on { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+  .empty { text-align: center; color: var(--muted); margin-top: 14vh; padding: 0 20px; }
+  .empty h1 { color: var(--text); font-weight: 600; margin-bottom: 6px; }
+  .empty .big { font-size: 40px; }
+  .empty ul { text-align: left; display: inline-block; margin-top: 14px; font-size: 0.9em; }
+
+  form { border-top: 1px solid var(--line); padding: 10px 16px 12px; }
+  #attachRow { max-width: var(--width); margin: 0 auto 8px; }
+  #attachRow:empty { display: none; }
+  .composer { max-width: var(--width); margin: 0 auto; display: flex; gap: 6px; align-items: flex-end; background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 8px; }
+  .composer:focus-within { border-color: var(--accent); }
+  #input { flex: 1; min-width: 140px; background: none; border: 0; outline: 0; resize: none; max-height: 200px; padding: 6px; }
+  @media (max-width: 900px) { .composer { flex-wrap: wrap; } #input { flex-basis: 100%; order: -1; } }
+  .icon { background: none; border: 0; border-radius: 8px; padding: 6px 8px; font-size: 16px; filter: grayscale(.4); }
+  .icon:hover { background: var(--panel); filter: none; }
+  #micBtn.rec { background: color-mix(in srgb, var(--danger) 30%, transparent); filter: none; animation: pulse 1s infinite; }
+  #send { background: var(--accent); color: #0b1220; border: 0; border-radius: 8px; padding: 8px 16px; font-weight: 600; }
+  #send.stop { background: var(--danger); }
+  .hint { max-width: var(--width); margin: 6px auto 0; color: var(--muted); font-size: 12px; display: flex; justify-content: space-between; gap: 10px; }
+  #ctxMeter.warn { color: var(--warn); }
+  #dropzone { position: absolute; inset: 0; background: color-mix(in srgb, var(--bg) 80%, transparent); border: 3px dashed var(--accent); display: none; align-items: center; justify-content: center; font-size: 20px; z-index: 5; pointer-events: none; }
+  #dropzone.show { display: flex; }
+  #toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%) translateY(20px); background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 9px 14px; opacity: 0; pointer-events: none; transition: .2s; z-index: 20; max-width: 80vw; box-shadow: 0 6px 24px rgba(0,0,0,.35); }
+  #toast.show { opacity: 1; transform: translateX(-50%); }
+
+  /* settings drawer */
+  #drawer { position: fixed; inset: 0; display: none; z-index: 10; }
+  #drawer.open { display: block; }
+  #drawer .shade { position: absolute; inset: 0; background: rgba(0,0,0,.45); }
+  #drawer .panel { position: absolute; right: 0; top: 0; bottom: 0; width: min(500px, 100%); background: var(--panel); border-left: 1px solid var(--line); display: flex; flex-direction: column; }
+  .tabs { display: flex; border-bottom: 1px solid var(--line); }
+  .tabs button { flex: 1; background: none; border: 0; padding: 12px 4px; color: var(--muted); border-bottom: 2px solid transparent; font-size: 13.5px; }
+  .tabs button.on { color: var(--text); border-bottom-color: var(--accent); }
+  .tabs .close { flex: 0 0 44px; }
+  .tabbody { flex: 1; overflow-y: auto; padding: 16px; display: none; }
+  .tabbody.on { display: block; }
+  .field { margin-bottom: 16px; }
+  .field > label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 5px; }
+  .field textarea { width: 100%; resize: vertical; }
+  .field input[type=text] { width: 100%; }
+  .field small, .help { color: var(--muted); font-size: 12px; display: block; margin-top: 4px; }
+  .check { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .themes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .swatch { border: 2px solid var(--line); border-radius: 8px; padding: 8px; text-align: left; font-size: 13px; }
+  .swatch.on { border-color: var(--accent); }
+  .swatch .dots { display: flex; gap: 4px; margin-bottom: 6px; }
+  .swatch .dots i { width: 14px; height: 14px; border-radius: 50%; display: block; }
+  input[type=color] { width: 44px; height: 30px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; }
+  input[type=range] { flex: 1; accent-color: var(--accent); }
+  h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 22px 0 10px; font-weight: 600; }
+  h3:first-child { margin-top: 0; }
+  .mrow { border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; margin-bottom: 8px; background: var(--panel2); }
+  .mrow.inuse { border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
+  .mtop { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .mtop b { font-weight: 600; overflow-wrap: anywhere; }
+  .mmeta { color: var(--muted); font-size: 12px; margin: 3px 0 7px; }
+  .minfo { font-size: 12px; margin-top: 8px; border-top: 1px solid var(--line); padding-top: 8px; }
+  .bar { height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; margin: 6px 0 3px; }
+  .bar i { display: block; height: 100%; background: var(--accent); transition: width .3s; }
+  .pull { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-top: 8px; font-size: 12.5px; }
+  .sugg { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .sugg div { flex: 1; }
+  .sugg small { color: var(--muted); display: block; }
+
+  /* AI view panel */
+  #inspector { width: 380px; flex-shrink: 0; background: var(--panel); border-left: 1px solid var(--line); display: none; flex-direction: column; min-width: 0; }
+  #inspector.open { display: flex; }
+  .ihead { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  .ihead strong { flex: 1; }
+  .ihead .note { font-size: 12px; }
+  .ihead a { color: var(--accent); }
+  .ihead .ghost { padding: 2px 8px; }
+  .live { width: 9px; height: 9px; border-radius: 50%; background: var(--line); flex-shrink: 0; }
+  .live.on { background: var(--ok); animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .3; } }
+  #itabs button { padding: 9px 4px; font-size: 13px; }
+  #ibody { flex: 1; overflow-y: auto; padding: 12px 14px; font-size: 13px; }
+  .note { color: var(--muted); }
+  .note.small { font-size: 11.5px; margin-top: 16px; }
+  .isect { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 14px 0 6px; }
+  .isect:first-child { margin-top: 0; }
+  .thoughts { white-space: pre-wrap; font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; line-height: 1.55; background: var(--code); border: 1px solid var(--line); border-radius: 8px; padding: 10px; overflow-wrap: anywhere; }
+  .caret { color: var(--accent); animation: pulse .8s step-end infinite; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 16px; }
+  .stat { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 7px 8px; }
+  .stat b { display: block; font-size: 15px; }
+  .stat span { color: var(--muted); font-size: 11px; line-height: 1.2; display: block; }
+  .timeline { list-style: none; margin: 0; padding: 0 0 0 6px; }
+  .timeline li { position: relative; padding: 0 0 12px 16px; border-left: 2px solid var(--line); }
+  .timeline li:last-child { border-left-color: transparent; }
+  .timeline li::before { content: ""; position: absolute; left: -7px; top: 3px; width: 8px; height: 8px; border-radius: 50%; background: var(--panel); border: 2px solid var(--accent); }
+  .timeline li.done::before { background: var(--accent); }
+  .timeline li.active::before { animation: pulse 1s infinite; }
+  .timeline li.warn::before { border-color: var(--warn); background: var(--warn); }
+  .timeline .t { color: var(--muted); font: 11px ui-monospace, Consolas, monospace; margin-right: 4px; }
+  .timeline .d { color: var(--muted); font-size: 12px; }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin: 10px 0 14px; }
+  .kv span { color: var(--muted); }
+  .kv b { font-weight: 500; overflow-wrap: anywhere; }
+  .pmsg { border: 1px solid var(--line); border-radius: 8px; margin-bottom: 6px; background: var(--panel2); }
+  .pmsg summary { padding: 6px 10px; display: flex; gap: 8px; align-items: center; list-style: none; }
+  .pmsg summary::-webkit-details-marker { display: none; }
+  .pmsg .pv { color: var(--muted); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; flex: 1; }
+  .pmsg pre { margin: 0; padding: 8px 10px; white-space: pre-wrap; overflow-wrap: anywhere; border-top: 1px solid var(--line); max-height: 320px; overflow-y: auto; font: 12px/1.5 ui-monospace, Consolas, monospace; }
+  .role { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line); flex-shrink: 0; }
+  .role.system { color: var(--accent); }
+  .role.assistant { color: var(--ok); }
+  /* agent swarm */
+  .swarm { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; background: color-mix(in srgb, var(--panel) 60%, transparent); }
+  .swhead { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .swhead .live { margin-left: auto; }
+  .swplan { font-size: 13px; color: var(--muted); border-left: 2px solid var(--accent); padding: 4px 10px; margin-bottom: 10px; }
+  .agent { border: 1px solid var(--line); border-radius: 9px; margin-bottom: 7px; background: var(--panel2); }
+  .agent > summary { list-style: none; display: flex; align-items: center; gap: 8px; padding: 7px 10px; }
+  .agent > summary::-webkit-details-marker { display: none; }
+  .agent > summary b { font-weight: 600; }
+  .astat { margin-left: auto; font-size: 11.5px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+  .astat.work { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+  .astat.wait { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, transparent); animation: pulse 1.2s infinite; }
+  .astat.done { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
+  .astat.err { color: var(--danger); }
+  .abody { padding: 0 10px 8px; font-size: 13.5px; }
+  .atask { color: var(--muted); font-size: 12.5px; margin-bottom: 6px; white-space: pre-wrap; max-height: 4.6em; overflow: hidden; }
+  .step { border-left: 2px solid var(--line); padding: 3px 0 3px 10px; margin: 4px 0; }
+  .step.error, .step.denied { border-left-color: var(--danger); }
+  .step.done { border-left-color: var(--ok); }
+  .step.approval { border-left-color: var(--warn); }
+  .step .note { font-size: 12px; }
+  .sres summary { font-size: 12.5px; color: var(--muted); }
+  .sres pre, .appr pre { background: var(--code); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; margin: 5px 0 0; font: 12px/1.45 ui-monospace, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 260px; overflow-y: auto; }
+  .appr { margin-top: 6px; border: 1px solid color-mix(in srgb, var(--warn) 50%, transparent); border-radius: 8px; padding: 8px 10px; background: color-mix(in srgb, var(--warn) 7%, transparent); }
+  .appr .row { margin-top: 8px; }
+  .alive { font-size: 12.5px; color: var(--muted); white-space: pre-wrap; margin-top: 4px; max-height: 6em; overflow: hidden; }
+  .afinal { margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--line); }
+  .swfinal { margin-top: 4px; }
+  .swfiles { font-size: 13px; margin-top: 8px; }
+  .swfiles a { color: var(--accent); margin-right: 10px; }
+  .swpics { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .swpics img { width: 180px; border-radius: 8px; border: 1px solid var(--line); }
+  .roster-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; font-size: 13px; }
+  .wsfile { display: flex; gap: 8px; font-size: 13px; padding: 3px 0; border-bottom: 1px solid var(--line); }
+  .wsfile a { color: var(--accent); flex: 1; overflow-wrap: anywhere; }
+  .imgcard { max-width: 560px; }
+  .genimg { display: block; width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line); background: var(--panel2); }
+  .imgwait { aspect-ratio: var(--ar, 1); width: 100%; border-radius: 10px; border: 1px dashed var(--line); background: var(--panel2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 20px; color: var(--muted); font-size: 13px; text-align: center; }
+  .imgwait .bar { width: 70%; }
+  .inspecting .msg.assistant .bubble { cursor: pointer; }
+  .msg.assistant.sel .bubble { box-shadow: inset 3px 0 0 var(--accent); padding-left: 12px; }
+</style>
+</head>
+<body>
+<aside>
+  <button class="new" id="newChat">+ New chat</button>
+  <div class="search"><input type="search" id="search" placeholder="Search chats…"></div>
+  <div id="convos"></div>
+  <div class="side-foot"><button class="ghost" id="openSettings" style="width:100%">⚙ Settings</button></div>
+</aside>
+<main>
+  <header>
+    <label title="Chat with one model, or hand the task to a swarm of agents">Mode <select id="mode">
+      <option value="chat">💬 Chat</option>
+      <option value="team">🐝 Team</option>
+      <option value="lead">👑 Lead</option>
+      <option value="debate">⚖️ Debate</option>
+    </select></label>
+    <label>Preset <select id="preset"></select></label>
+    <label>Model <select id="model"></select><span id="vsWrap" hidden>vs <select id="model2"></select></span></label>
+    <label title="Send each message to two models and see both answers side by side"><input type="checkbox" id="compareToggle"> Compare</label>
+    <label>Temp <input type="number" id="temp" min="0" max="2" step="0.1"></label>
+    <label title="After each reply, check it against the preset's expectations and fix it if needed"><input type="checkbox" id="gateToggle"> Quality check</label>
+    <label><input type="checkbox" id="showThink"> Show reasoning</label>
+    <label title="Look up passages from your document library for every message"><input type="checkbox" id="useLibrary"> 📚 Library</label>
+    <button class="ghost" id="toggleSystem">Extra instructions</button>
+    <button class="ghost" id="toggleInspector" title="See what the AI receives, does and thinks">🧠 AI view</button>
+  </header>
+  <div id="system">
+    <textarea id="systemText" placeholder="Optional: extra instructions for this chat only, added on top of the preset."></textarea>
+    <small>Applies to the current chat.</small>
+  </div>
+  <div id="messages"></div>
+  <form id="form">
+    <div id="attachRow"></div>
+    <div class="composer">
+      <button type="button" class="icon" id="attachBtn" title="Attach text, code, PDF or image files">📎</button>
+      <input type="file" id="fileInput" multiple hidden>
+      <button type="button" class="icon" id="imgBtn" title="Make a picture from what you typed">🖼</button>
+      <textarea id="input" rows="1" placeholder="Message…"></textarea>
+      <button type="button" class="icon" id="micBtn" title="Voice typing" hidden>🎤</button>
+      <button id="send" type="submit">Send</button>
+    </div>
+    <div class="hint"><span>Enter to send · Shift+Enter for a new line · 🖼 or <b>/image</b> to make a picture · <b>/remember</b> to add a memory</span><span id="ctxMeter"></span></div>
+  </form>
+  <div id="dropzone">Drop files to attach them</div>
+</main>
+
+<section id="inspector">
+  <div class="ihead">
+    <span class="live" id="live" title="Lights up while the AI is working"></span>
+    <strong>AI view</strong>
+    <span class="note" id="iwhich"></span>
+    <button class="ghost" id="closeInspector" title="Close">✕</button>
+  </div>
+  <div class="tabs" id="itabs">
+    <button data-itab="thoughts">Thoughts</button>
+    <button data-itab="actions">Actions</button>
+    <button data-itab="perspective">Perspective</button>
+  </div>
+  <div id="ibody"></div>
+</section>
+
+<div id="drawer">
+  <div class="shade"></div>
+  <div class="panel">
+    <div class="tabs">
+      <button data-tab="general" class="on">General</button>
+      <button data-tab="appearance">Look</button>
+      <button data-tab="presets">Presets</button>
+      <button data-tab="models">Models</button>
+      <button data-tab="memory">Memory</button>
+      <button data-tab="agents">Agents</button>
+      <button data-tab="library">Library</button>
+      <button class="close" id="closeSettings" title="Close">✕</button>
+    </div>
+
+    <div class="tabbody on" id="tab-general">
+      <h3>Conversation</h3>
+      <div class="field">
+        <label>Context length (how much of the chat the AI can see at once)</label>
+        <select id="numCtx">
+          <option value="2048">2,048 tokens (about 1,500 words)</option>
+          <option value="4096">4,096 tokens (about 3,000 words)</option>
+          <option value="8192">8,192 tokens (about 6,000 words)</option>
+          <option value="16384">16,384 tokens (about 12,000 words)</option>
+          <option value="32768">32,768 tokens (about 24,000 words)</option>
+        </select>
+        <small>When a chat grows past this, the AI stops seeing its oldest messages. Bigger values use more graphics memory and can make replies slower. Changing it reloads the model on the next message.</small>
+      </div>
+      <label class="check"><input type="checkbox" id="autoTitle"> Give new chats a short title written by the AI</label>
+
+      <h3>Pictures</h3>
+      <p class="help" id="imgStatus" style="margin-top:0"></p>
+      <div class="row" style="gap:12px; align-items:flex-start">
+        <div class="field" style="flex:1"><label>Shape</label>
+          <select id="imgSize" style="width:100%">
+            <option value="1024x1024">Square (1024 × 1024)</option>
+            <option value="832x1216">Portrait (832 × 1216)</option>
+            <option value="1216x832">Landscape (1216 × 832)</option>
+            <option value="1344x768">Wide (1344 × 768)</option>
+          </select></div>
+        <div class="field" style="flex:1"><label>Detail: <span id="imgStepsVal"></span> steps</label>
+          <div class="row"><input type="range" id="imgSteps" min="10" max="50" step="1"></div>
+          <small>More steps: finer detail but slower.</small></div>
+      </div>
+      <label class="check"><input type="checkbox" id="imgEnhance"> Let the chat model turn my description into a detailed prompt first</label>
+      <label class="check"><input type="checkbox" id="fastPictures"> ⚡ Fast mode (SDXL-Lightning: about 5 seconds instead of about 30, slightly less detail)</label>
+      <div class="field" style="margin-top:8px">
+        <label>When you attach a picture to a 🖼 request, use it as…</label>
+        <select id="refMode" style="width:100%">
+          <option value="style">A style reference (IP-Adapter: copies its look, colors and mood)</option>
+          <option value="outline">An outline to follow (ControlNet: keeps its shapes and composition)</option>
+          <option value="both">Both</option>
+        </select>
+      </div>
+      <small class="help">Pictures use your graphics card too. Local Chat automatically frees memory when switching between chatting and drawing, so the first message or picture after a switch takes a few extra seconds.</small>
+
+      <h3>Voice</h3>
+      <div class="field">
+        <label>Read-aloud voice</label>
+        <select id="voiceSel" style="width:100%"></select>
+        <small>Voices marked "online" send the text to Microsoft to be spoken. The others run on your PC.</small>
+      </div>
+      <div class="field">
+        <label>Speaking speed: <span id="rateVal"></span>×</label>
+        <div class="row"><input type="range" id="rate" min="0.6" max="2" step="0.1"></div>
+      </div>
+      <label class="check"><input type="checkbox" id="autoRead"> Read every reply aloud automatically</label>
+      <div class="field" style="margin-top:8px">
+        <label>Voice typing (🎤)</label>
+        <select id="voiceEngine" style="width:100%">
+          <option value="local">🔒 On this PC (Whisper, English only, fully private)</option>
+          <option value="browser">Browser's online service (any language, sent to Microsoft or Google)</option>
+        </select>
+        <small>On this PC: click 🎤, speak, then click it again to turn your words into text.</small>
+      </div>
+
+      <h3>Your data</h3>
+      <p class="help" id="storageNote"></p>
+      <div class="row" style="margin-top:8px">
+        <button class="ghost" id="exportAll">Export everything</button>
+        <button class="ghost" id="exportChat">Export this chat (Markdown)</button>
+        <button class="ghost" id="importBtn">Import backup…</button>
+        <input type="file" id="importFile" accept=".json,application/json" hidden>
+      </div>
+      <small class="help">Importing adds the backup's chats to yours, and replaces your presets and memory if the backup has them.</small>
+    </div>
+
+    <div class="tabbody" id="tab-appearance">
+      <div class="field"><label>Theme</label><div class="themes" id="themes"></div></div>
+      <div class="field">
+        <label>Accent color</label>
+        <div class="row"><input type="color" id="accent"><button class="ghost" id="accentReset">Use theme default</button></div>
+      </div>
+      <div class="field">
+        <label>Text size: <span id="fsVal"></span>px</label>
+        <div class="row"><input type="range" id="fs" min="12" max="20" step="1"></div>
+      </div>
+      <div class="field">
+        <label>Chat width: <span id="widthVal"></span>px</label>
+        <div class="row"><input type="range" id="width" min="600" max="1400" step="20"></div>
+      </div>
+    </div>
+
+    <div class="tabbody" id="tab-presets">
+      <div class="field">
+        <label>Edit preset</label>
+        <div class="row">
+          <select id="pEditSel" style="flex:1"></select>
+          <button class="ghost" id="pNew">New</button>
+          <button class="ghost" id="pDup">Duplicate</button>
+          <button class="ghost danger" id="pDel">Delete</button>
+        </div>
+      </div>
+      <div class="row" style="gap:10px; align-items:flex-start">
+        <div class="field" style="width:70px"><label>Icon</label><input type="text" id="pIcon" maxlength="4"></div>
+        <div class="field" style="flex:1"><label>Name</label><input type="text" id="pName"></div>
+        <div class="field" style="width:90px"><label>Temp</label><input type="number" id="pTemp" min="0" max="2" step="0.1"></div>
+      </div>
+      <div class="field">
+        <label>Personality &amp; instructions</label>
+        <textarea id="pSystem" rows="8"></textarea>
+      </div>
+      <div class="field">
+        <label>Expectations (one per line)</label>
+        <textarea id="pExpect" rows="7"></textarea>
+        <small>The model is told to meet these. With Quality check on, each reply is reviewed against them and rewritten if it misses any.</small>
+      </div>
+      <div class="field"><button class="ghost danger" id="pReset">Reset all presets to defaults</button></div>
+    </div>
+
+    <div class="tabbody" id="tab-models">
+      <h3>Installed <button class="ghost sm" id="mRefresh" style="float:right">Refresh</button></h3>
+      <div id="mList"></div>
+      <h3>Download a model</h3>
+      <div class="row">
+        <input type="text" id="mName" placeholder="Model name, e.g. llama3.2 or gemma3:4b" style="flex:1">
+        <button class="primary" id="mPull">Download</button>
+      </div>
+      <small class="help">Find more names at ollama.com/library. Add a size after a colon for a specific version, like qwen3:8b.</small>
+      <div id="mPulls"></div>
+      <h3>Suggestions</h3>
+      <small class="help" style="margin-bottom:6px">Sizes are approximate. Models that fit in your graphics card's memory run much faster.</small>
+      <div id="mSuggest"></div>
+    </div>
+
+    <div class="tabbody" id="tab-agents">
+      <h3>How agents work</h3>
+      <div class="field">
+        <label>When should agents ask before acting?</label>
+        <select id="approvals" style="width:100%">
+          <option value="risky">Ask before risky actions: running code, deleting or overwriting files, going online</option>
+          <option value="all">Ask before every tool use</option>
+          <option value="never">Never ask: act freely with the tools allowed below</option>
+        </select>
+      </div>
+      <div class="row" style="gap:16px; align-items:flex-start">
+        <div class="field" style="flex:1"><label>Run agents' code</label>
+          <select id="codeSandbox" style="width:100%">
+            <option value="1">🔒 In the sandbox (Python in WebAssembly; can't touch your PC or the internet)</option>
+            <option value="0">On your PC (full Python with your installed packages)</option>
+          </select><small id="sandboxNote">The sandbox includes numpy, pandas and matplotlib, and needs no approval.</small></div>
+        <div class="field" style="flex:1"><label>Search the web with</label>
+          <select id="searchEngine" style="width:100%">
+            <option value="searxng">🔒 Private SearXNG on this PC (many search engines)</option>
+            <option value="basic">DuckDuckGo instant answers + Wikipedia</option>
+          </select><small>SearXNG sends your search words to engines like DuckDuckGo, Google and Bing, but without cookies or anything that identifies you.</small></div>
+      </div>
+      <div class="row" style="gap:16px; align-items:flex-start">
+        <div class="field" style="flex:1"><label>Tool uses per agent: <span id="agentStepsVal"></span></label>
+          <div class="row"><input type="range" id="agentSteps" min="2" max="15" step="1"></div>
+          <small>Stops an agent from looping forever.</small></div>
+        <div class="field" style="flex:1"><label>Debate rounds</label>
+          <select id="debateRounds" style="width:100%"><option value="1">1: answer, then judge</option><option value="2">2: answer, critique, then judge</option></select></div>
+      </div>
+      <p class="help" style="margin-top:0">Modes: <b>🐝 Team</b>: a planner splits the job, specialists do their parts, a reviewer checks and writes the answer. <b>👑 Lead</b>: a lead agent hires helpers one at a time, even inventing new ones, and decides as it goes. <b>⚖️ Debate</b>: agents answer separately, critique each other, and a judge writes the best answer. Agents take turns on your graphics card, so a swarm takes longer than a single reply.</p>
+
+      <h3>Tools agents may use</h3>
+      <div id="toolGroups"></div>
+      <label class="check" style="margin-top:8px"><input type="checkbox" id="useWikipedia"> Also search Wikipedia (your search terms go to Wikipedia as well as DuckDuckGo)</label>
+      <div class="field">
+        <label>Brave Search key (optional, for full web results)</label>
+        <input type="text" id="braveKey" placeholder="Paste a key from brave.com/search/api, or leave empty" autocomplete="off" spellcheck="false" style="width:100%; -webkit-text-security: disc">
+        <small>Without a key, search covers DuckDuckGo instant answers and Wikipedia, which is good for facts but not for news or specific websites. Agents can always read any web page they have a link to. The key is saved in data\store.json.</small>
+      </div>
+
+      <h3>Debate team</h3>
+      <div class="roster-tools" id="debaterBoxes"></div>
+      <small class="help">Pick 2 to 4. They answer in turn.</small>
+
+      <h3>Agent roster</h3>
+      <div class="field">
+        <div class="row">
+          <select id="rEditSel" style="flex:1"></select>
+          <button class="ghost" id="rNew">New</button>
+          <button class="ghost danger" id="rDel">Delete</button>
+        </div>
+      </div>
+      <div class="row" style="gap:10px; align-items:flex-start">
+        <div class="field" style="width:70px"><label>Icon</label><input type="text" id="rIcon" maxlength="4"></div>
+        <div class="field" style="flex:1"><label>Name</label><input type="text" id="rName"></div>
+      </div>
+      <div class="field"><label>Role &amp; instructions</label><textarea id="rRole" rows="4"></textarea></div>
+      <div class="field"><label>Tools this agent may use</label><div class="roster-tools" id="rTools"></div></div>
+      <div class="field"><button class="ghost danger" id="rReset">Reset roster to defaults</button></div>
+
+      <h3>MCP tool servers <button class="ghost sm" id="mcpRefresh" style="float:right">Refresh</button></h3>
+      <p class="help" style="margin-top:0">MCP (Model Context Protocol) is an open standard for plugging tools into AI agents. Each server you turn on adds tools that agents can use (the 🧭 Generalist gets all of them). Servers are open-source programs downloaded from npm when first turned on, and they run on your PC. Tools from servers you don't mark as trusted always ask before running.</p>
+      <div id="mcpList"></div>
+      <details style="margin-top:8px"><summary class="note">Advanced: edit the server list (JSON)</summary>
+        <textarea id="mcpJson" rows="10" spellcheck="false" style="width:100%; font: 12px ui-monospace, Consolas, monospace; margin-top:6px"></textarea>
+        <div class="row" style="margin-top:6px"><button class="ghost" id="mcpSaveJson">Save &amp; reconnect</button></div>
+        <small class="help">Each server: {"command": "npx" or a program, "args": [...], "env": {...}, "enabled": true, "trusted": false}.</small>
+      </details>
+
+      <h3>Workspace <button class="ghost sm" id="wsRefresh" style="float:right">Refresh</button></h3>
+      <p class="help" style="margin-top:0">Agents' files live in <b>LocalChat\workspace</b>. They can't read or change anything outside it.</p>
+      <div id="wsList"></div>
+    </div>
+
+    <div class="tabbody" id="tab-library">
+      <p class="help" style="margin-top:0">Add your notes, documents and PDFs to search them by meaning. Turn on <b>📚 Library</b> in the top bar and the AI looks up the most relevant passages for every message. Agents can always search it. Everything is processed on your PC with the nomic-embed-text model.</p>
+      <div class="row">
+        <button class="primary" id="libAdd">Add files…</button>
+        <input type="file" id="libFiles" multiple hidden>
+        <span class="note" id="libStatus"></span>
+      </div>
+      <small class="help">Text, Markdown, code, CSV, JSON, HTML and PDF files. Scanned PDFs are read with OCR.</small>
+      <h3>In your library</h3>
+      <div id="libList"></div>
+    </div>
+
+    <div class="tabbody" id="tab-memory">
+      <label class="check"><input type="checkbox" id="memOn"> Use memory in every chat</label>
+      <div class="field">
+        <label>What the AI should know about you (one fact per line)</label>
+        <textarea id="memText" rows="12" placeholder="I'm a beginner at Python&#10;Call me Wake&#10;I prefer short answers"></textarea>
+        <small>These are added to the instructions of every chat, so you can see them in the AI view's Perspective tab. Tip: type <b>/remember something</b> in the chat box to add a line from anywhere.</small>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script type="module">
+// The server puts a per-session key here; private endpoints require it (sandboxed code never sees it).
+const UI_TOKEN = "__UI_TOKEN__";
+const nativeFetch = window.fetch.bind(window);
+window.fetch = (u, o = {}) => {
+  if (typeof u === "string" && u.startsWith("/")) o = { ...o, headers: { ...(o.headers || {}), "x-ui-token": UI_TOKEN } };
+  return nativeFetch(u, o);
+};
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmtSec = (ns) => (ns / 1e9).toFixed(ns < 1e10 ? 2 : 1) + "s";
+const fmtMs = (ms) => (ms < 1000 ? ms + "ms" : (ms / 1000).toFixed(1) + "s");
+const fmtK = (n) => (n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + "k" : String(n));
+const fmtBytes = (b) => (b >= 1e9 ? (b / 1e9).toFixed(1) + " GB" : Math.round(b / 1e6) + " MB");
+let toastTimer;
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 4000);
+}
+
+// ================= defaults =================
+const THEMES = {
+  midnight: { name: "Midnight", bg: "#111317", panel: "#181b21", panel2: "#1f232b", line: "#2a2f39", code: "#0b0d10", text: "#e6e8ec", muted: "#8b93a3", accent: "#6ea8fe", user: "#243049" },
+  ocean:    { name: "Ocean",    bg: "#0d1b2a", panel: "#122436", panel2: "#183047", line: "#25405c", code: "#08131f", text: "#e0ecf7", muted: "#89a3be", accent: "#4fd1c5", user: "#1d3a52" },
+  forest:   { name: "Forest",   bg: "#0f1712", panel: "#152019", panel2: "#1c2a21", line: "#2a3b30", code: "#09100b", text: "#e3eee6", muted: "#8ea596", accent: "#7bd88f", user: "#21382a" },
+  ember:    { name: "Ember",    bg: "#1a1210", panel: "#221815", panel2: "#2c1f1b", line: "#3d2b25", code: "#120c0a", text: "#f3e7e2", muted: "#ad958c", accent: "#ff8a5b", user: "#3a2620" },
+  grape:    { name: "Grape",    bg: "#15111c", panel: "#1c1726", panel2: "#251e32", line: "#352b47", code: "#0e0b13", text: "#ece6f5", muted: "#9d91b3", accent: "#b18cff", user: "#2e2442" },
+  paper:    { name: "Paper",    bg: "#f7f6f3", panel: "#efede8", panel2: "#ffffff", line: "#dcd8cf", code: "#f1efea", text: "#1f1f1f", muted: "#6b6b6b", accent: "#2563eb", user: "#e3ebfb" },
+};
+
+const DEFAULT_PRESETS = [
+  {
+    id: "general", icon: "💬", name: "General", temperature: 0.8,
+    system: "You are a capable, straight-talking assistant. Answer exactly what was asked, directly and completely. Skip disclaimers, lectures and filler.",
+    expectations: [],
+  },
+  {
+    id: "coder", icon: "💻", name: "Coder", temperature: 0.3,
+    system: "You are a senior software engineer and pair programmer. You write correct, idiomatic, production-quality code and explain your reasoning briefly. When a request is ambiguous, pick the most sensible interpretation, say what you assumed, and proceed. Prefer simple solutions over clever ones.",
+    expectations: [
+      "Code is complete and runnable: no placeholders, \"...\", or TODOs standing in for real logic",
+      "Every code block is fenced with a language tag",
+      "Assumptions about language, versions or environment are stated",
+      "Edge cases, errors or likely pitfalls are pointed out",
+      "Explanation is short and comes after the code unless the user asked for an explanation",
+    ],
+  },
+  {
+    id: "image", icon: "🎨", name: "Image Prompts", temperature: 0.9,
+    system: "You are an expert prompt writer for text-to-image models such as Stable Diffusion, SDXL and Flux. You do not create images yourself: you write the prompts the user pastes into their image tool. Turn the user's idea into a vivid, precise prompt.\n\nAlways answer in this format:\n**Prompt:** comma-separated descriptive phrases\n**Negative prompt:** things to avoid\n**Settings:** aspect ratio, steps, CFG scale, sampler suggestion",
+    expectations: [
+      "Uses the Prompt / Negative prompt / Settings format",
+      "The prompt covers subject, setting, style or medium, lighting, composition and camera angle or lens",
+      "The prompt is comma-separated phrases, most important first, under about 75 words",
+      "The negative prompt lists common defects (e.g. blurry, extra fingers, watermark, low quality)",
+      "Offers 1-2 short variations when the request is open-ended",
+    ],
+  },
+  {
+    id: "writer", icon: "✍️", name: "Creative Writer", temperature: 1.0,
+    system: "You are a skilled fiction writer. You write vivid, immersive prose with strong voice, concrete sensory detail and natural dialogue. You follow the user's lead on genre, tone and content, and you write mature or dark material when asked.",
+    expectations: [
+      "Stays in the requested point of view, tense and tone",
+      "Shows through action, dialogue and detail instead of summarizing feelings",
+      "No moralizing, disclaimers or author's notes unless asked",
+      "Does not end with a summary or a question to the user; ends on a story beat",
+    ],
+  },
+  {
+    id: "roleplay", icon: "🎭", name: "Roleplay", temperature: 1.0,
+    system: "You are a roleplay partner. Fully embody the character or scenario the user sets up. Speak and act as that character, react to what the user's character does, and keep the scene moving. Only step out of character if the user writes (OOC: ...).",
+    expectations: [
+      "Stays in character the whole reply",
+      "Never speaks or decides for the user's character",
+      "Adds something new each turn: an action, detail or complication",
+      "Replies are a reasonable length (usually 1-4 paragraphs)",
+    ],
+  },
+  {
+    id: "analyst", icon: "🔎", name: "Analyst", temperature: 0.4,
+    system: "You are a sharp research analyst. You break problems down, weigh evidence, and give clear, well-structured answers. You separate facts from opinions and say plainly when you are unsure or when your knowledge may be out of date.",
+    expectations: [
+      "Opens with a direct answer or bottom line",
+      "Uses headings or bullets when the answer has several parts",
+      "Flags uncertainty and states assumptions",
+      "Gives concrete examples or numbers where they help",
+    ],
+  },
+  {
+    id: "editor", icon: "📝", name: "Editor", temperature: 0.3,
+    system: "You are a meticulous editor. You improve the user's text for clarity, flow, grammar and tone while keeping their voice and meaning.",
+    expectations: [
+      "Returns the full edited text first",
+      "Then lists the most important changes briefly",
+      "Keeps the author's meaning and voice; does not add new claims",
+    ],
+  },
+];
+
+const SUGGESTED = [
+  { name: "huihui_ai/qwen3-abliterated:8b", size: "4.8 GB", desc: "8B abliterated (uncensored) all-rounder; thinks and uses tools well" },
+  { name: "huihui_ai/qwen3-vl-abliterated:4b", size: "3.1 GB", desc: "4B abliterated vision model: sees pictures you attach" },
+  { name: "huihui_ai/qwen3-abliterated:4b", size: "2.4 GB", desc: "4B abliterated, thinks, very fast" },
+  { name: "huihui_ai/deepseek-r1-abliterated:8b", size: "4.8 GB", desc: "8B abliterated reasoning specialist (long step-by-step thinking)" },
+  { name: "huihui_ai/qwen2.5-coder-abliterate:7b", size: "4.5 GB", desc: "7B abliterated coding specialist" },
+  { name: "huihui_ai/phi4-mini-abliterated", size: "2.4 GB", desc: "3.8B abliterated, strong reasoning for its size" },
+  { name: "huihui_ai/llama3.2-abliterate:3b", size: "2.1 GB", desc: "3B abliterated, fast general chat" },
+  { name: "huihui_ai/qwen3-vl-abliterated:8b", size: "5.9 GB", desc: "8B abliterated vision model, sharper than the 4B" },
+  { name: "dolphin3", size: "4.9 GB", desc: "8B, uncensored all-rounder, good at chat and code" },
+  { name: "dolphin-mistral", size: "4.1 GB", desc: "7B, uncensored classic, fast" },
+  { name: "llama3.2", size: "2.0 GB", desc: "3B, very fast and light; handy for compare mode" },
+  { name: "qwen3:8b", size: "5.2 GB", desc: "8B reasoning model: shows its thoughts in the AI view" },
+  { name: "qwen2.5-coder:7b", size: "4.7 GB", desc: "7B, specialised for programming" },
+  { name: "gemma3:4b", size: "3.3 GB", desc: "4B, can see images you attach" },
+  { name: "llava", size: "4.7 GB", desc: "7B vision model: describes and reads images" },
+];
+
+// ================= saved data =================
+// Everything is saved to data\store.json through the app server, so every window sees the same chats.
+// If the server's storage isn't reachable, it falls back to this browser's storage.
+let store = {}, useServer = false, persistTimer = null;
+
+async function initStore() {
+  const local = {};
+  for (const k of ["settings", "presets", "chats", "thinkers"]) {
+    try { const v = JSON.parse(localStorage.getItem(k)); if (v != null) local[k] = v; } catch {}
+  }
+  if (localStorage.getItem("model")) local.model = localStorage.getItem("model");
+  try { Object.assign(local, JSON.parse(localStorage.getItem("localchat")) || {}); } catch {}
+  try {
+    const r = await fetch("/store");
+    if (!r.ok) throw new Error();
+    const remote = await r.json();
+    useServer = true;
+    store = { ...local, ...remote };
+    // Keep chats that only exist in this browser (e.g. from before storage moved to the app folder).
+    const ids = new Set((remote.chats || []).map((c) => c.id));
+    const extra = (local.chats || []).filter((c) => c?.id && !ids.has(c.id));
+    if (extra.length) store.chats = [...(remote.chats || []), ...extra].sort((a, b) => String(b.id).localeCompare(String(a.id)));
+    if (Object.keys(local).length && (await persistNow()))
+      for (const k of ["settings", "presets", "chats", "thinkers", "model", "localchat"]) localStorage.removeItem(k);
+  } catch {
+    store = local;
+  }
+}
+async function persistNow() {
+  clearTimeout(persistTimer); persistTimer = null;
+  const body = JSON.stringify(store);
+  if (useServer) {
+    try {
+      const r = await fetch("/store", { method: "PUT", body, headers: { "content-type": "application/json" } });
+      if (!r.ok) throw new Error();
+      return true;
+    } catch { toast("Couldn't save. Is the Local Chat server still running?"); return false; }
+  }
+  try { localStorage.setItem("localchat", body); return true; } catch { toast("Browser storage is full; export a backup."); return false; }
+}
+function saveAll(now = false) {
+  Object.assign(store, { settings, presets, chats, thinkers, memory, roster });
+  clearTimeout(persistTimer);
+  if (now) persistNow(); else persistTimer = setTimeout(persistNow, 400);
+}
+addEventListener("visibilitychange", () => { if (document.hidden && persistTimer) persistNow(); });
+addEventListener("pagehide", () => {
+  if (!persistTimer) return;
+  const body = JSON.stringify(store);
+  if (useServer) navigator.sendBeacon("/store?t=" + UI_TOKEN, new Blob([body], { type: "application/json" }));
+  else try { localStorage.setItem("localchat", body); } catch {}
+});
+
+await initStore();
+
+// ================= state =================
+let settings = Object.assign({
+  theme: "midnight", accent: null, fs: 15, width: 820, gate: true, think: true, lastPreset: "general",
+  inspector: false, itab: "thoughts", numCtx: 8192, autoTitle: true, compare: false,
+  voice: "", rate: 1, autoRead: false, voiceOk: false,
+  imgSize: "1024x1024", imgSteps: 25, imgEnhance: true,
+  mode: "chat", approvals: "risky", agentSteps: 8, debateRounds: 2, debaters: ["analyst", "skeptic", "creative"],
+  toolGroups: { files: true, code: true, web: true, pictures: true, library: true, mcp: true }, wikipedia: true, braveKey: "",
+  codeSandbox: true, searchEngine: "searxng", fastPictures: true, refMode: "style", voiceEngine: "local", useLibrary: false,
+}, store.settings || {});
+settings.toolGroups = { files: true, code: true, web: true, pictures: true, library: true, mcp: true, ...settings.toolGroups };
+if (!settings.voicePicked) settings.voice = "piper";   // the private voice is the default until you choose another
+let caps2 = {};   // what's installed on this PC (from /capabilities)
+const refreshCapabilities = async () => { try { caps2 = await (await fetch("/capabilities")).json(); } catch { caps2 = {}; } return caps2; };
+let imageEngine = { ready: false, running: false };
+let presets = store.presets?.length ? store.presets : structuredClone(DEFAULT_PRESETS);
+let chats = store.chats || [];
+let thinkers = store.thinkers || {};
+let memory = Object.assign({ enabled: true, items: [] }, store.memory || {});
+const DEFAULT_ROSTER = [
+  { id: "researcher", icon: "🔎", name: "Researcher", role: "You find accurate information. Search first, then read the most relevant pages before concluding (use browse_page for pages that need JavaScript). Check the user's document library when the question may be about their own files. Always list the links or documents you used as sources.", tools: ["web_search", "read_webpage", "browse_page", "search_library", "write_file", "read_file", "list_files"] },
+  { id: "coder", icon: "💻", name: "Coder", role: "You write correct, working code and prove it works by running it. If it fails, read the error, fix it and run it again. Save finished code to a file in the workspace.", tools: ["run_code", "write_file", "read_file", "list_files", "delete_file"] },
+  { id: "analyst", icon: "📊", name: "Analyst", role: "You reason carefully with facts and numbers. Use run_code for every calculation instead of doing math in your head, and draw charts with matplotlib when they help. State your assumptions.", tools: ["run_code", "web_search", "search_library", "read_file", "list_files"] },
+  { id: "writer", icon: "✍️", name: "Writer", role: "You turn material into clear, well-organized, engaging writing that fits the reader.", tools: ["read_file", "write_file", "list_files", "search_library"] },
+  { id: "artist", icon: "🎨", name: "Artist", role: "You create artistic pictures (not charts or graphs). Turn ideas into vivid, specific image prompts (subject, setting, style, lighting, composition) and draw them with make_picture.", tools: ["make_picture"] },
+  { id: "skeptic", icon: "🧐", name: "Skeptic", role: "You look for errors, weak reasoning, missing evidence and risks. You check claims instead of trusting them, and say plainly what is wrong.", tools: ["web_search", "read_webpage", "read_file", "run_code"] },
+  { id: "creative", icon: "💡", name: "Creative", role: "You come up with original, unexpected ideas and angles others miss, while staying practical.", tools: [] },
+  { id: "generalist", icon: "🧭", name: "Generalist", role: "You are a capable all-rounder who uses whatever tools the task needs.", tools: ["list_files", "read_file", "write_file", "run_code", "web_search", "read_webpage", "browse_page", "screenshot_page", "search_library", "read_image_text", "make_picture", "mcp:*"] },
+];
+let roster = store.roster?.length ? store.roster : structuredClone(DEFAULT_ROSTER);
+// Roster update 2: give the built-in agents the newly added tools (custom agents are left alone).
+if ((store.rosterVersion || 1) < 2) {
+  for (const r of roster) { const d = DEFAULT_ROSTER.find((x) => x.id === r.id); if (d) r.tools = [...new Set([...r.tools, ...d.tools])]; }
+  store.rosterVersion = 2;
+}
+let current = null;
+let controller = null;
+let editingPresetId = presets[0].id;
+let selectedIdx = null;   // reply shown in the AI view; null = follow the latest
+let editingIdx = null;    // user message being edited
+let pending = [];         // attachments waiting to be sent
+let models = [];          // installed models from Ollama
+const caps = {};          // model name -> { capabilities, ctx, details }
+const presetById = (id) => presets.find((p) => p.id === id) || presets[0];
+
+// ================= appearance =================
+function applyTheme() {
+  const t = THEMES[settings.theme] || THEMES.midnight;
+  const root = document.documentElement.style;
+  for (const k of ["bg", "panel", "panel2", "line", "code", "text", "muted", "user"]) root.setProperty("--" + k, t[k]);
+  root.setProperty("--accent", settings.accent || t.accent);
+  root.setProperty("--fs", settings.fs + "px");
+  root.setProperty("--width", settings.width + "px");
+  $("accent").value = settings.accent || t.accent;
+  $("fs").value = settings.fs; $("fsVal").textContent = settings.fs;
+  $("width").value = settings.width; $("widthVal").textContent = settings.width;
+  $("themes").innerHTML = Object.entries(THEMES).map(([id, th]) =>
+    `<button class="swatch ${id === settings.theme ? "on" : ""}" data-theme="${id}" style="background:${th.bg};color:${th.text}">
+      <div class="dots"><i style="background:${th.panel2}"></i><i style="background:${th.accent}"></i><i style="background:${th.user}"></i></div>${th.name}</button>`
+  ).join("");
+}
+$("themes").onclick = (e) => {
+  const b = e.target.closest("[data-theme]");
+  if (!b) return;
+  settings.theme = b.dataset.theme; settings.accent = null;
+  saveAll(); applyTheme();
+};
+$("accent").oninput = () => { settings.accent = $("accent").value; saveAll(); applyTheme(); };
+$("accentReset").onclick = () => { settings.accent = null; saveAll(); applyTheme(); };
+$("fs").oninput = () => { settings.fs = +$("fs").value; saveAll(); applyTheme(); };
+$("width").oninput = () => { settings.width = +$("width").value; saveAll(); applyTheme(); };
+
+// ================= settings drawer =================
+$("openSettings").onclick = () => {
+  $("drawer").classList.add("open");
+  renderGeneral(); renderPresetEditor(); renderMemory(); renderModelsTab(); renderAgentsTab(); renderLibrary();
+};
+const closeDrawer = () => $("drawer").classList.remove("open");
+$("closeSettings").onclick = closeDrawer;
+$("drawer").querySelector(".shade").onclick = closeDrawer;
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  closeDrawer();
+  if (editingIdx != null) { editingIdx = null; renderMessages(); }
+});
+document.querySelectorAll(".tabs [data-tab]").forEach((b) => b.onclick = () => {
+  document.querySelectorAll(".tabs [data-tab]").forEach((x) => x.classList.toggle("on", x === b));
+  document.querySelectorAll(".tabbody").forEach((x) => x.classList.toggle("on", x.id === "tab-" + b.dataset.tab));
+  if (b.dataset.tab === "models") renderModelsTab();
+  if (b.dataset.tab === "agents") { refreshCapabilities().then(refreshMcp).then(renderAgentsTab); }
+  if (b.dataset.tab === "library") renderLibrary();
+});
+
+// ----- General tab -----
+function renderGeneral() {
+  $("numCtx").value = settings.numCtx;
+  $("autoTitle").checked = settings.autoTitle;
+  $("autoRead").checked = settings.autoRead;
+  $("rate").value = settings.rate; $("rateVal").textContent = settings.rate;
+  $("imgSize").value = settings.imgSize;
+  $("imgSteps").value = settings.imgSteps; $("imgStepsVal").textContent = settings.imgSteps;
+  $("imgEnhance").checked = settings.imgEnhance;
+  $("fastPictures").checked = settings.fastPictures;
+  $("refMode").value = settings.refMode;
+  $("voiceEngine").value = settings.voiceEngine;
+  refreshImageEngine().then(() => {
+    const ex = imageEngine.extras || {};
+    $("fastPictures").disabled = !ex.fast;
+    for (const o of $("refMode").options) o.disabled = (o.value !== "outline" && !ex.style) || (o.value !== "style" && !ex.outline);
+    $("imgStatus").textContent = !imageEngine.ready
+      ? "The image engine isn't installed, so 🖼 is unavailable."
+      : imageEngine.running ? "Image engine ready (SDXL), and currently running." : "Image engine installed (SDXL). It starts automatically the first time you make a picture.";
+  });
+  renderVoices();
+  $("storageNote").textContent = useServer
+    ? "Your chats, presets and memory are saved in the app folder (data\\store.json), with an automatic backup copy that's at most an hour old."
+    : "Saving in this browser only, because the app server's storage isn't available. Export a backup to be safe.";
+}
+$("numCtx").onchange = () => { settings.numCtx = +$("numCtx").value; saveAll(); updateCtxMeter(); };
+$("autoTitle").onchange = () => { settings.autoTitle = $("autoTitle").checked; saveAll(); };
+$("autoRead").onchange = () => { settings.autoRead = $("autoRead").checked; saveAll(); };
+$("rate").oninput = () => { settings.rate = +$("rate").value; $("rateVal").textContent = settings.rate; saveAll(); };
+$("imgSize").onchange = () => { settings.imgSize = $("imgSize").value; saveAll(); };
+$("imgSteps").oninput = () => { settings.imgSteps = +$("imgSteps").value; $("imgStepsVal").textContent = settings.imgSteps; saveAll(); };
+$("imgEnhance").onchange = () => { settings.imgEnhance = $("imgEnhance").checked; saveAll(); };
+$("fastPictures").onchange = () => { settings.fastPictures = $("fastPictures").checked; saveAll(); };
+$("refMode").onchange = () => { settings.refMode = $("refMode").value; saveAll(); };
+$("voiceEngine").onchange = () => { settings.voiceEngine = $("voiceEngine").value; saveAll(); };
+async function refreshImageEngine() {
+  try { imageEngine = await (await fetch("/image/status")).json(); } catch { imageEngine = { ready: false, running: false }; }
+  $("imgBtn").title = imageEngine.ready ? "Make a picture from what you typed" : "Picture making isn't installed";
+  $("imgBtn").style.opacity = imageEngine.ready ? "" : ".35";
+  return imageEngine;
+}
+
+// ----- Memory tab -----
+function renderMemory() {
+  $("memOn").checked = memory.enabled;
+  $("memText").value = memory.items.join("\n");
+}
+$("memOn").onchange = () => { memory.enabled = $("memOn").checked; saveAll(); };
+$("memText").oninput = () => { memory.items = $("memText").value.split("\n").map((s) => s.trim()).filter(Boolean); saveAll(); };
+
+// ----- export / import -----
+function download(name, text, type) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+const safeName = (s) => (s || "chat").replace(/[\\/:*?"<>|]+/g, "").slice(0, 60).trim() || "chat";
+$("exportAll").onclick = () => {
+  saveAll();
+  download(`local-chat-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(store, null, 1), "application/json");
+};
+$("exportChat").onclick = () => {
+  const c = current;
+  const lines = [`# ${c.title}`, "", `*Preset: ${presetById(c.presetId).name} · exported ${new Date().toLocaleString()}*`, ""];
+  for (const m of c.messages) {
+    if (m.role === "user") {
+      lines.push("## You", "", m.content);
+      for (const a of m.attachments || []) lines.push(`*Attached: ${a.name}*`);
+    } else if (m.kind === "image") {
+      lines.push("## AI (picture)", "", m.image?.file ? `![picture](data/images/${m.image.file})` : "*(no picture)*", "", `Prompt: ${m.image?.prompt || ""}`);
+    } else {
+      lines.push(`## AI${m.opts ? ` (${m.opts.model})` : ""}`, "", splitThinking(m).content);
+    }
+    lines.push("");
+  }
+  download(safeName(c.title) + ".md", lines.join("\n"), "text/markdown");
+};
+$("importBtn").onclick = () => $("importFile").click();
+$("importFile").onchange = async () => {
+  const f = $("importFile").files[0];
+  $("importFile").value = "";
+  if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    const ids = new Set(chats.map((c) => c.id));
+    const add = (data.chats || []).filter((c) => c?.id && Array.isArray(c.messages) && !ids.has(c.id));
+    const parts = [`${add.length} new chat${add.length === 1 ? "" : "s"}`];
+    if (data.presets?.length) parts.push("replace your presets");
+    if (data.memory) parts.push("replace your memory");
+    if (!add.length && !data.presets && !data.memory) return toast("That file has nothing new to import.");
+    if (!confirm(`Import ${parts.join(", ")}?`)) return;
+    chats.push(...add);
+    chats.sort((a, b) => String(b.id).localeCompare(String(a.id)));
+    if (data.presets?.length) presets = data.presets;
+    if (data.memory) memory = Object.assign({ enabled: true, items: [] }, data.memory);
+    saveAll(true); renderPresetSelect(); renderPresetEditor(); renderMemory(); render();
+    toast("Backup imported.");
+  } catch (e) {
+    toast("Couldn't import that file: it isn't a Local Chat backup.");
+  }
+};
+
+// ================= preset editor =================
+function renderPresetEditor() {
+  if (!presets.some((p) => p.id === editingPresetId)) editingPresetId = presets[0].id;
+  const p = presetById(editingPresetId);
+  $("pEditSel").innerHTML = presets.map((x) => `<option value="${x.id}">${esc(x.icon + " " + x.name)}</option>`).join("");
+  $("pEditSel").value = p.id;
+  $("pIcon").value = p.icon; $("pName").value = p.name; $("pTemp").value = p.temperature;
+  $("pSystem").value = p.system; $("pExpect").value = p.expectations.join("\n");
+  $("pDel").disabled = presets.length <= 1;
+}
+function editPreset(fn) { fn(presetById(editingPresetId)); saveAll(); renderPresetSelect(); }
+$("pEditSel").onchange = () => { editingPresetId = $("pEditSel").value; renderPresetEditor(); };
+$("pIcon").oninput = () => { editPreset((p) => p.icon = $("pIcon").value || "•"); refreshEditorSelect(); };
+$("pName").oninput = () => { editPreset((p) => p.name = $("pName").value || "Untitled"); refreshEditorSelect(); };
+$("pTemp").oninput = () => editPreset((p) => p.temperature = Math.min(2, Math.max(0, +$("pTemp").value || 0)));
+$("pSystem").oninput = () => editPreset((p) => p.system = $("pSystem").value);
+$("pExpect").oninput = () => editPreset((p) => p.expectations = $("pExpect").value.split("\n").map((s) => s.trim()).filter(Boolean));
+function refreshEditorSelect() {
+  const opt = $("pEditSel").selectedOptions[0];
+  const p = presetById(editingPresetId);
+  if (opt) opt.textContent = p.icon + " " + p.name;
+  renderSidebar();
+}
+function addPreset(base) {
+  const p = Object.assign(structuredClone(base), { id: "p" + Date.now() });
+  presets.push(p); editingPresetId = p.id;
+  saveAll(); renderPresetSelect(); renderPresetEditor();
+  $("pName").focus(); $("pName").select();
+}
+$("pNew").onclick = () => addPreset({ icon: "⭐", name: "New preset", temperature: 0.7, system: "", expectations: [] });
+$("pDup").onclick = () => { const p = presetById(editingPresetId); addPreset({ ...p, name: p.name + " copy" }); };
+$("pDel").onclick = () => {
+  const p = presetById(editingPresetId);
+  if (presets.length <= 1 || !confirm(`Delete the "${p.name}" preset? Chats using it will switch to "${presets.find((x) => x !== p).name}".`)) return;
+  presets = presets.filter((x) => x !== p);
+  saveAll(); renderPresetSelect(); renderPresetEditor(); render();
+};
+$("pReset").onclick = () => {
+  if (!confirm("Replace all presets with the built-in defaults? Your custom presets and edits will be lost.")) return;
+  presets = structuredClone(DEFAULT_PRESETS);
+  saveAll(); renderPresetSelect(); renderPresetEditor(); render();
+};
+
+// ================= models =================
+async function getCaps(name) {
+  if (caps[name]) return caps[name];
+  try {
+    const d = await (await fetch("/api/show", { method: "POST", body: JSON.stringify({ model: name, name }) })).json();
+    const ctxKey = Object.keys(d.model_info || {}).find((k) => k.endsWith(".context_length"));
+    caps[name] = { capabilities: d.capabilities ?? null, ctx: ctxKey ? d.model_info[ctxKey] : null, details: d.details || {} };
+  } catch {
+    caps[name] = { capabilities: null, ctx: null, details: {} };
+  }
+  return caps[name];
+}
+// true / false when known, null when this Ollama version doesn't say
+const canSee = (name) => (caps[name]?.capabilities ? caps[name].capabilities.includes("vision") : null);
+
+async function loadModels() {
+  try {
+    const d = await (await fetch("/api/tags")).json();
+    if (d.error) throw new Error(d.error);
+    models = (d.models || []).sort((a, b) => a.name.localeCompare(b.name));
+  } catch {
+    models = [];
+  }
+  const opts = models.length ? models.map((m) => `<option>${esc(m.name)}</option>`).join("") : `<option value="">Ollama not reachable</option>`;
+  $("model").innerHTML = opts; $("model2").innerHTML = opts;
+  const has = (n) => n && models.some((m) => m.name === n);
+  if (has(store.model)) $("model").value = store.model;
+  if (has(store.model2)) $("model2").value = store.model2;
+  else $("model2").value = models.find((m) => m.name !== $("model").value)?.name || $("model").value;
+  models.forEach((m) => getCaps(m.name));
+  if ($("drawer").classList.contains("open")) renderModelsTab();
+}
+$("model").onchange = () => { store.model = $("model").value; saveAll(); };
+$("model2").onchange = () => { store.model2 = $("model2").value; saveAll(); };
+$("compareToggle").onchange = () => {
+  settings.compare = $("compareToggle").checked; saveAll();
+  $("vsWrap").hidden = !settings.compare;
+  if (settings.compare && models.length < 2) toast("Compare needs two models. Download another one in Settings → Models.");
+};
+
+async function renderModelsTab() {
+  let loaded = [];
+  try { loaded = (await (await fetch("/api/ps")).json()).models || []; } catch {}
+  await Promise.all(models.map((m) => getCaps(m.name)));
+  const inUse = $("model").value;
+  $("mList").innerHTML = !models.length
+    ? `<p class="note">No models found. Is Ollama running?</p>`
+    : models.map((m) => {
+        const c = caps[m.name] || {};
+        const l = loaded.find((x) => x.name === m.name);
+        const d = m.details || {};
+        const can = c.capabilities || [];
+        const tags = [
+          can.includes("thinking") || thinkers[m.name] ? "🧠 thinks" : "",
+          can.includes("vision") ? "👁 sees images" : "",
+          can.includes("tools") ? "🛠 tools" : "",
+        ].filter(Boolean).join(" · ");
+        const gpu = l ? Math.round((l.size_vram / l.size) * 100) : 0;
+        return `<div class="mrow ${m.name === inUse ? "inuse" : ""}" data-model="${esc(m.name)}">
+          <div class="mtop"><b>${esc(m.name)}</b>
+            ${m.name === inUse ? `<span class="tag on">in use</span>` : ""}
+            ${l ? `<span class="tag" title="Loaded right now. Parts not on the graphics card run on the slower main processor.">in memory · ${gpu}% on graphics card</span>` : ""}
+          </div>
+          <div class="mmeta">${fmtBytes(m.size)}${d.parameter_size ? " · " + esc(d.parameter_size) : ""}${d.quantization_level ? " · " + esc(d.quantization_level) : ""}${tags ? " · " + tags : ""}</div>
+          <div class="row">
+            <button class="ghost sm" data-muse ${m.name === inUse ? "disabled" : ""}>Use</button>
+            <button class="ghost sm" data-minfo>Info</button>
+            <button class="ghost sm danger" data-mdel>Delete</button>
+          </div>
+          <div class="minfo" hidden></div>
+        </div>`;
+      }).join("");
+  const installed = (n) => models.some((m) => m.name === n || m.name === n + ":latest");
+  $("mSuggest").innerHTML = SUGGESTED.map((s) => `<div class="sugg"><div><b>${esc(s.name)}</b> <small>${esc(s.desc)} · ~${s.size}</small></div>${
+    installed(s.name) ? `<span class="tag on">installed</span>` : pulls[s.name] ? `<span class="tag">downloading…</span>` : `<button class="ghost sm" data-mget="${esc(s.name)}">Download</button>`}</div>`).join("");
+}
+$("mRefresh").onclick = () => loadModels();
+$("mList").onclick = async (e) => {
+  const row = e.target.closest(".mrow");
+  if (!row) return;
+  const name = row.dataset.model;
+  if (e.target.hasAttribute("data-muse")) {
+    $("model").value = name; store.model = name; saveAll(); renderModelsTab();
+    toast(`Now using ${name}`);
+  } else if (e.target.hasAttribute("data-minfo")) {
+    const box = row.querySelector(".minfo");
+    if (!box.hidden) { box.hidden = true; return; }
+    const c = await getCaps(name);
+    const m = models.find((x) => x.name === name);
+    const d = c.details || m.details || {};
+    box.innerHTML = `<div class="kv" style="margin:0">
+      <span>Family</span><b>${esc(d.family || "?")}</b>
+      <span>Size</span><b>${esc(d.parameter_size || "?")} parameters, ${fmtBytes(m.size)} on disk</b>
+      <span>Precision</span><b>${esc(d.quantization_level || "?")}</b>
+      <span>Max context</span><b>${c.ctx ? c.ctx.toLocaleString() + " tokens" : "unknown"}</b>
+      <span>Can</span><b>${c.capabilities ? esc(c.capabilities.join(", ")) : "unknown (older Ollama)"}</b>
+      <span>Downloaded</span><b>${new Date(m.modified_at).toLocaleDateString()}</b></div>`;
+    box.hidden = false;
+  } else if (e.target.hasAttribute("data-mdel")) {
+    const m = models.find((x) => x.name === name);
+    if (!confirm(`Delete ${name}? This frees ${fmtBytes(m.size)} of disk space. You can download it again later.`)) return;
+    const r = await fetch("/api/delete", { method: "DELETE", body: JSON.stringify({ model: name, name }) });
+    if (r.ok) { toast(`Deleted ${name}`); delete caps[name]; await loadModels(); }
+    else toast(`Couldn't delete ${name}: ${(await r.text()).slice(0, 120)}`);
+  }
+};
+
+const pulls = {};   // model name -> { status, pct, done, total, ctrl, error }
+function renderPulls() {
+  $("mPulls").innerHTML = Object.entries(pulls).map(([name, p]) => `<div class="pull">
+    <div class="row" style="justify-content:space-between"><b>${esc(name)}</b>
+      <button class="ghost sm" data-pcancel="${esc(name)}">${p.error ? "Dismiss" : "Cancel"}</button></div>
+    ${p.error ? `<div class="error">${esc(p.error)}</div>` : `<div class="bar"><i style="width:${p.pct || 0}%"></i></div>
+    <div class="note">${esc(p.status)}${p.total ? ` · ${fmtBytes(p.done)} of ${fmtBytes(p.total)} (${Math.floor(p.pct)}%)` : ""}</div>`}
+  </div>`).join("");
+}
+$("mPulls").onclick = (e) => {
+  const name = e.target.dataset.pcancel;
+  if (!name || !pulls[name]) return;
+  if (pulls[name].error) { delete pulls[name]; renderPulls(); }
+  else pulls[name].ctrl.abort();
+};
+$("mSuggest").onclick = (e) => { if (e.target.dataset.mget) pullModel(e.target.dataset.mget); };
+$("mPull").onclick = () => { pullModel($("mName").value); $("mName").value = ""; };
+$("mName").onkeydown = (e) => { if (e.key === "Enter") $("mPull").click(); };
+
+async function pullModel(name) {
+  name = name.trim();
+  if (!name || (pulls[name] && !pulls[name].error)) return;
+  const ctrl = new AbortController();
+  pulls[name] = { status: "Starting…", pct: 0, ctrl };
+  renderPulls(); renderModelsTab();
+  let ok = false;
+  try {
+    const r = await fetch("/api/pull", { method: "POST", signal: ctrl.signal, body: JSON.stringify({ model: name, name, stream: true }) });
+    const reader = r.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split("\n"); buf = lines.pop();
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const d = JSON.parse(line);
+        if (d.error) throw new Error(d.error);
+        const p = pulls[name];
+        p.status = d.status?.startsWith("pulling ") && d.total ? "Downloading" : (d.status || "").replace(/^./, (c) => c.toUpperCase());
+        if (d.total) { p.total = d.total; p.done = d.completed || 0; p.pct = (p.done / p.total) * 100; }
+        if (d.status === "success") ok = true;
+      }
+      renderPulls();
+    }
+    if (!ok) throw new Error("The download ended early. Try again.");
+    delete pulls[name];
+    toast(`${name} is ready to use`);
+  } catch (e) {
+    if (e.name === "AbortError") { delete pulls[name]; toast(`Download of ${name} cancelled`); }
+    else pulls[name].error = /not found|file does not exist/i.test(e.message) ? `No model called "${name}". Check the name on ollama.com/library.` : e.message;
+  }
+  renderPulls();
+  await loadModels();
+}
+
+// ================= header controls =================
+function renderPresetSelect() {
+  $("preset").innerHTML = presets.map((p) => `<option value="${p.id}">${esc(p.icon + " " + p.name)}</option>`).join("");
+  if (current) $("preset").value = presetById(current.presetId).id;
+}
+$("preset").onchange = () => {
+  const p = presetById($("preset").value);
+  current.presetId = p.id; current.temperature = p.temperature;
+  settings.lastPreset = p.id; saveAll(); render();
+};
+$("temp").oninput = () => { current.temperature = +$("temp").value; saveAll(); };
+$("gateToggle").onchange = () => { settings.gate = $("gateToggle").checked; saveAll(); };
+$("showThink").onchange = () => { settings.think = $("showThink").checked; saveAll(); renderMessages(); };
+$("toggleSystem").onclick = () => $("system").classList.toggle("open");
+$("systemText").oninput = () => { current.system = $("systemText").value; saveAll(); };
+
+// ================= chats & sidebar =================
+function newChat() {
+  const p = presetById(settings.lastPreset);
+  current = { id: Date.now().toString(), title: "New chat", presetId: p.id, temperature: p.temperature, system: "", messages: [] };
+  selectedIdx = null; editingIdx = null;
+  chats.unshift(current);
+  $("search").value = "";
+  saveAll(); render(); $("input").focus();
+}
+function deleteChat(id) {
+  const c = chats.find((x) => x.id === id);
+  if (c.messages.length && !confirm(`Delete "${c.title}"? This can't be undone.`)) return;
+  chats = chats.filter((x) => x.id !== id);
+  if (current?.id === id) { current = chats[0] || null; selectedIdx = null; editingIdx = null; }
+  saveAll();
+  if (!current) newChat(); else render();
+}
+function chatMatches(c, q) {
+  return !q || c.title.toLowerCase().includes(q) || c.messages.some((m) => (m.content || "").toLowerCase().includes(q));
+}
+function renderSidebar() {
+  const q = $("search").value.trim().toLowerCase();
+  const list = chats.filter((c) => chatMatches(c, q));
+  const row = (c) => `<div class="convo ${c.id === current?.id ? "active" : ""}" data-id="${c.id}">
+    <span title="Double-click to rename">${esc(presetById(c.presetId).icon + " " + c.title)}</span>
+    <button data-pin="${c.id}" class="${c.pinned ? "pinned" : ""}" title="${c.pinned ? "Unpin" : "Pin to top"}">📌</button>
+    <button data-del="${c.id}" title="Delete chat">✕</button></div>`;
+  const pinned = list.filter((c) => c.pinned), rest = list.filter((c) => !c.pinned);
+  let html = "";
+  if (pinned.length) html += `<div class="group">Pinned</div>` + pinned.map(row).join("") + (rest.length ? `<div class="group">Chats</div>` : "");
+  html += rest.map(row).join("");
+  $("convos").innerHTML = html || (q ? `<p class="note" style="padding:8px 10px">No chats match "${esc(q)}".</p>` : "");
+}
+$("search").oninput = renderSidebar;
+$("newChat").onclick = newChat;
+$("convos").onclick = (e) => {
+  if (e.target.dataset.del) return deleteChat(e.target.dataset.del);
+  if (e.target.dataset.pin) {
+    const c = chats.find((x) => x.id === e.target.dataset.pin);
+    c.pinned = !c.pinned; saveAll(); return renderSidebar();
+  }
+  const row = e.target.closest(".convo");
+  if (row) { current = chats.find((c) => c.id === row.dataset.id); selectedIdx = null; editingIdx = null; render(); }
+};
+$("convos").ondblclick = (e) => {
+  const row = e.target.closest(".convo");
+  if (!row || e.target.tagName === "BUTTON") return;
+  const c = chats.find((x) => x.id === row.dataset.id);
+  const t = prompt("Rename chat", c.title);
+  if (t?.trim()) { c.title = t.trim().slice(0, 80); c.autoTitled = true; saveAll(); renderSidebar(); }
+};
+
+// ================= rendering =================
+function md(text) {
+  const parts = text.split(/```([\w+-]*)\n?([\s\S]*?)(?:```|$)/g);
+  let out = "";
+  for (let i = 0; i < parts.length; i += 3) {
+    out += esc(parts[i])
+      .replace(/^#{1,6} (.+)$/gm, "<strong>$1</strong>")
+      .replace(/`([^`\n]+)`/g, "<code>$1</code>")
+      .replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>")
+      .replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>")
+      .split(/\n{2,}/).map((p) => p.trim() ? `<p>${p.trim().replace(/\n/g, "<br>")}</p>` : "").join("");
+    if (parts[i + 2] !== undefined)
+      out += `<div class="codewrap"><button class="copy" type="button">Copy</button><pre><code>${esc(parts[i + 2])}</code></pre></div>`;
+  }
+  return out;
+}
+// Separate reasoning from the answer. Models deliver it three ways:
+//  1. Ollama's separate "thinking" field
+//  2. <think>…</think> at the start of the content
+//  3. no opening tag at all, just reasoning followed by </think> (some fine-tuned qwen3 builds)
+// For case 3, while a reply is still streaming we can't see </think> yet, so models known to
+// think (m.expectThink) have their early text treated as reasoning until the answer begins.
+function splitThinking(m) {
+  let thinking = m.thinking || "", content = m.content || "";
+  const open = content.match(/^\s*<think>/);
+  if (open) content = content.slice(open[0].length);
+  const end = content.indexOf("</think>");
+  if (end !== -1) { thinking += content.slice(0, end); content = content.slice(end + 8); }
+  else if (open || (m.expectThink && m.streaming)) { thinking += content; content = ""; }
+  return { thinking: thinking.trim(), content: content.trimStart() };
+}
+function learnThinker(model, raw) {
+  if (!thinkers[model] && (raw.thinking || /<\/think>/.test(raw.content || ""))) { thinkers[model] = true; saveAll(); }
+}
+const GATE_LABEL = {
+  checking: "⏳ Checking quality…",
+  pass: "✓ Passed quality check",
+  revised: "↻ Revised by quality check",
+  unclear: "? Quality check inconclusive, kept original",
+  skipped: "Quality check stopped",
+  failed: "Quality check failed to run",
+};
+function attachmentsHTML(m) {
+  const a = m.attachments || [];
+  if (!a.length) return "";
+  return `<div class="atts">` + a.map((x) => x.kind === "image"
+    ? `<img class="thumb" src="data:image/jpeg;base64,${x.data}" alt="${esc(x.name)}" title="${esc(x.name)}">`
+    : `<span class="chip" title="${esc(x.name)}">📄 <span>${esc(x.name)}</span></span>`).join("") + `</div>`;
+}
+function answerHTML(m) {
+  const { thinking, content } = splitThinking(m);
+  let html = "";
+  if (thinking && settings.think)
+    html += `<details class="think"${content ? "" : " open"}><summary>Reasoning</summary>${esc(thinking)}</details>`;
+  html += m.error ? `<p class="error">${esc(m.error)}</p>` : md(content || (thinking ? "" : m.waiting ? "" : "…"));
+  if (m.waiting) html += `<p class="note">Waiting for its turn…</p>`;
+  return html;
+}
+function messageHTML(m, i, sel) {
+  const busy = !!controller;
+  if (m.role === "user") {
+    if (i === editingIdx)
+      return `<div class="msg user"><div class="bubble editing">${attachmentsHTML(m)}<textarea class="editbox">${esc(m.content)}</textarea>
+        <div class="row end"><button class="ghost" type="button" data-act="cancel-edit">Cancel</button>
+        <button class="primary" type="button" data-act="save-edit" data-idx="${i}">Save &amp; resend</button></div></div></div>`;
+    return `<div class="msg user"><div class="bubble">${attachmentsHTML(m)}${m.imageRequest ? "🖼 " : m.swarmMode ? MODE_LABEL[m.swarmMode].split(" ")[0] + " " : ""}${esc(m.content)}</div>
+      <div class="acts"><button type="button" data-act="edit" data-idx="${i}" ${busy ? "disabled" : ""} title="Edit this message and get a new reply">✏️ Edit</button></div></div>`;
+  }
+  if (m.kind === "image") return imageMessageHTML(m, i, sel, busy);
+  if (m.kind === "swarm") return swarmMessageHTML(m, i, sel, busy);
+  let html = "";
+  if (m.compare) {
+    html += `<div class="compare">` + m.compare.map((c, k) => {
+      const tps = c.stats ? (c.stats.eval_count / (c.stats.eval_duration / 1e9)).toFixed(1) : "";
+      return `<div class="cmp ${k === m.chosen ? "chosen" : ""}"><div class="cmphead"><b title="${esc(c.model)}">${esc(c.model)}</b>${
+        k === m.chosen ? `<span class="tag on">✓ kept in chat</span>`
+        : c.content && !c.streaming && !busy ? `<button class="ghost sm" type="button" data-act="use" data-idx="${i}" data-k="${k}">Keep this one</button>` : ""}</div>
+        ${answerHTML(c)}${c.stats ? `<div class="cmpstat">${c.stats.eval_count} tokens · ${tps} tokens/sec · ${fmtSec(c.stats.total_duration)}</div>` : ""}</div>`;
+    }).join("") + `</div>`;
+  } else {
+    html += answerHTML(m);
+  }
+  if (m.gate) html += `<div class="gate ${m.gate}">${GATE_LABEL[m.gate]}</div>`;
+  if (m.original) html += `<details class="orig"><summary>Show original draft</summary>${esc(m.original)}</details>`;
+  const live = m.streaming || m.compare?.some((c) => c.streaming || c.waiting);
+  const acts = live ? "" : `<div class="acts">
+    <button type="button" data-act="regen" data-idx="${i}" ${busy ? "disabled" : ""} title="Get a new answer to the message above">🔁 Regenerate</button>
+    <button type="button" data-act="copy" data-idx="${i}">📋 Copy</button>
+    <button type="button" data-act="speak" data-idx="${i}">🔊 Read aloud</button></div>`;
+  return `<div class="msg assistant${m.compare ? " wide" : ""}${i === sel ? " sel" : ""}" data-idx="${i}"><div class="bubble" title="${settings.inspector ? "Click to inspect this reply" : ""}">${html}</div>${acts}</div>`;
+}
+function imageMessageHTML(m, i, sel, busy) {
+  const im = m.image || {};
+  const [w, h] = (im.size || settings.imgSize).split("x").map(Number);
+  let html = `<div class="imgcard">`;
+  if (im.file) {
+    html += `<a href="/images/${esc(im.file)}" target="_blank" title="Open full size"><img class="genimg" src="/images/${esc(im.file)}" width="${w}" height="${h}" alt="${esc(im.prompt || "Generated picture")}"></a>`;
+  } else if (m.error) {
+    html += `<p class="error">${esc(m.error)}</p>`;
+  } else {
+    const pct = im.max ? (im.value / im.max) * 100 : 0;
+    html += `<div class="imgwait" style="--ar:${w}/${h}"><span>${esc(im.status || "Getting ready…")}</span>
+      <div class="bar"><i style="width:${pct}%"></i></div>${im.max ? `<span>step ${im.value} of ${im.max}</span>` : ""}</div>`;
+  }
+  if (im.upscaling) html += `<p class="note">⬆ ${esc(im.upscaling)}</p>`;
+  if (im.upscaled) html += `<p class="note">⬆ <a href="/images/${esc(im.upscaled)}" target="_blank" style="color:var(--accent)">Open the upscaled version (${w * 2} × ${h * 2})</a></p>`;
+  if (im.prompt) {
+    html += `<details class="think" style="margin-top:8px"><summary>Prompt</summary>${esc(im.prompt)}\n\nAvoid: ${esc(im.negative || "")}` +
+      `${im.seed != null ? `\n\n${w} × ${h} · ${im.steps} steps${im.fast ? " (fast mode)" : ""}${im.refMode ? ` · guided by your picture (${im.refMode})` : ""} · seed ${im.seed}${im.took ? ` · ${fmtMs(im.took)}` : ""}` : ""}</details>`;
+  }
+  html += `</div>`;
+  const canUp = im.file && !im.upscaled && imageEngine.extras?.upscale;
+  const acts = m.streaming ? "" : `<div class="acts">
+    <button type="button" data-act="regen" data-idx="${i}" ${busy ? "disabled" : ""} title="Make a new picture for the same request">🔁 New picture</button>
+    ${canUp ? `<button type="button" data-act="upscale" data-idx="${i}" ${busy ? "disabled" : ""} title="Make a sharper version at twice the size (Real-ESRGAN)">⬆ Upscale 2×</button>` : ""}
+    ${im.prompt ? `<button type="button" data-act="copy" data-idx="${i}">📋 Copy prompt</button>` : ""}</div>`;
+  return `<div class="msg assistant${i === sel ? " sel" : ""}" data-idx="${i}"><div class="bubble" title="${settings.inspector ? "Click to inspect this reply" : ""}">${html}</div>${acts}</div>`;
+}
+function renderMessages() {
+  scheduleInspector();
+  const box = $("messages");
+  if (!current.messages.length) {
+    const p = presetById(current.presetId);
+    box.innerHTML = `<div class="empty"><div class="big">${esc(p.icon)}</div><h1>${esc(p.name)}</h1>Pick a model and start typing.` +
+      (p.expectations.length ? `<br><ul>${p.expectations.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>` : "") + `</div>`;
+    updateCtxMeter();
+    return;
+  }
+  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+  const sel = settings.inspector ? inspectedIdx() : -1;
+  box.innerHTML = current.messages.map((m, i) => messageHTML(m, i, sel)).join("");
+  if (atBottom) box.scrollTop = box.scrollHeight;
+  if (editingIdx != null) { const t = box.querySelector(".editbox"); t?.focus(); }
+}
+function render() {
+  renderSidebar();
+  $("preset").value = presetById(current.presetId).id;
+  $("temp").value = current.temperature ?? presetById(current.presetId).temperature;
+  $("systemText").value = current.system || "";
+  renderMessages();
+  updateCtxMeter();
+}
+
+// ----- message actions -----
+$("messages").onclick = async (e) => {
+  if (e.target.classList.contains("copy")) {
+    await navigator.clipboard.writeText(e.target.nextElementSibling.textContent);
+    e.target.textContent = "Copied"; setTimeout(() => (e.target.textContent = "Copy"), 1200);
+    return;
+  }
+  // Remember which agent cards and tool results you opened, so live updates don't close them.
+  const sum = e.target.closest("details.agent > summary, details.sres > summary");
+  if (sum) {
+    const d = sum.parentElement, willOpen = !d.open;
+    if (d.classList.contains("agent")) {
+      for (const m of current.messages) for (const a of m.agents || []) if (a.id === d.dataset.aid) a.uiOpen = willOpen;
+    } else if (willOpen) openSteps.add(d.dataset.skey); else openSteps.delete(d.dataset.skey);
+    return;
+  }
+  const act = e.target.closest("[data-act]");
+  if (act) {
+    const idx = +act.dataset.idx;
+    const m = current.messages[idx];
+    switch (act.dataset.act) {
+      case "approve": approvals.get(act.dataset.key)?.(act.dataset.v); break;
+      case "upscale": upscalePicture(m); break;
+      case "edit": editingIdx = idx; renderMessages(); break;
+      case "cancel-edit": editingIdx = null; renderMessages(); break;
+      case "save-edit": {
+        const text = act.closest(".bubble").querySelector(".editbox").value.trim();
+        if (!text && !m.attachments?.length) return;
+        m.content = text;
+        current.messages = current.messages.slice(0, idx + 1);
+        editingIdx = null;
+        respond(current);
+        break;
+      }
+      case "regen":
+        if (controller) return;
+        current.messages = current.messages.slice(0, idx);
+        if (current.messages.at(-1)?.role !== "user") return render();
+        respond(current);
+        break;
+      case "copy":
+        if (m.kind === "image") { await navigator.clipboard.writeText(m.image?.prompt || ""); toast("Copied the picture's prompt"); break; }
+        await navigator.clipboard.writeText(splitThinking(m).content);
+        toast("Copied the answer");
+        break;
+      case "speak": speak(splitThinking(m).content); break;
+      case "use": chooseCompare(m, +act.dataset.k); saveAll(); renderMessages(); toast(`Kept ${m.compare[m.chosen].model}'s answer in the conversation`); break;
+    }
+    return;
+  }
+  // With the AI view open, clicking a reply inspects it
+  const row = e.target.closest(".msg.assistant");
+  if (!settings.inspector || !row || e.target.closest("summary, a, button") || getSelection().toString()) return;
+  const idx = +row.dataset.idx;
+  selectedIdx = idx === lastAssistantIdx() ? null : idx;
+  renderMessages();
+};
+function chooseCompare(reply, k) {
+  const c = reply.compare[k];
+  if (!c) return;
+  reply.chosen = k;
+  Object.assign(reply, { content: c.content, thinking: c.thinking, stats: c.stats, expectThink: c.expectThink });
+  reply.opts.model = c.model;
+}
+
+// ================= AI view panel =================
+let itab = settings.itab || "thoughts";
+let inspPending = false, lastKey = null;
+function lastAssistantIdx() {
+  if (!current) return -1;
+  for (let i = current.messages.length - 1; i >= 0; i--) if (current.messages[i].role === "assistant") return i;
+  return -1;
+}
+function inspectedIdx() {
+  if (selectedIdx != null && current?.messages[selectedIdx]?.role === "assistant") return selectedIdx;
+  return lastAssistantIdx();
+}
+function scheduleInspector() {
+  if (!settings.inspector || inspPending) return;
+  inspPending = true;
+  requestAnimationFrame(() => { inspPending = false; renderInspector(); });
+}
+function applyInspector() {
+  $("inspector").classList.toggle("open", settings.inspector);
+  $("toggleInspector").classList.toggle("on", settings.inspector);
+  document.body.classList.toggle("inspecting", settings.inspector);
+  lastKey = null;
+  renderMessages();
+}
+$("toggleInspector").onclick = () => { settings.inspector = !settings.inspector; saveAll(); applyInspector(); };
+$("closeInspector").onclick = () => { settings.inspector = false; saveAll(); applyInspector(); };
+$("itabs").onclick = (e) => {
+  const b = e.target.closest("[data-itab]");
+  if (!b) return;
+  itab = settings.itab = b.dataset.itab; saveAll(); renderInspector();
+};
+$("inspector").addEventListener("click", (e) => {
+  if (e.target.id === "followLatest") { e.preventDefault(); selectedIdx = null; renderMessages(); }
+});
+
+function ctxUsed(r) {
+  const s = r.stats;
+  if (!s) return null;
+  // Ollama reuses work from earlier turns, so prompt_eval_count can undercount; take the larger of it and an estimate.
+  return Math.max(s.prompt_eval_count || 0, Math.round((r.inChars || 0) / 3.5)) + (s.eval_count || 0);
+}
+function updateCtxMeter() {
+  const el = $("ctxMeter");
+  const r = current?.messages[lastAssistantIdx()];
+  const used = r && ctxUsed(r);
+  if (!used) { el.textContent = ""; return; }
+  const max = settings.numCtx;
+  el.textContent = `Context ≈ ${fmtK(used)} / ${fmtK(max)} tokens`;
+  el.classList.toggle("warn", used > max * 0.85);
+  el.title = used > max * 0.85 ? "Nearly full: the AI will soon stop seeing the start of this chat. Raise the context length in Settings → General, or start a new chat." : "How much of the AI's context window this chat uses";
+}
+
+function renderInspector() {
+  if (!settings.inspector) return;
+  const idx = inspectedIdx();
+  const r = current?.messages[idx];
+  const streaming = !!controller && idx === current.messages.length - 1;
+  $("live").classList.toggle("on", streaming);
+  document.querySelectorAll("#itabs [data-itab]").forEach((b) => b.classList.toggle("on", b.dataset.itab === itab));
+  $("iwhich").innerHTML = !r ? "" : selectedIdx == null ? "latest reply" : `earlier reply · <a href="#" id="followLatest">latest</a>`;
+
+  // Perspective is static per reply: don't rebuild it (and collapse what you opened) on every streamed token
+  const key = `${current?.id}:${idx}:${itab}:${!!r?.reviewMsgs}:${!!r?.stats}:${current?.messages.length}:${r?.agents?.reduce((n, a) => n + a.messages.length, 0) ?? ""}`;
+  if (itab === "perspective" && key === lastKey) return;
+  lastKey = key;
+
+  const body = $("ibody");
+  const nearBottom = body.scrollHeight - body.scrollTop - body.clientHeight < 40;
+  body.innerHTML = !r
+    ? `<p class="note">Send a message and this panel shows what the AI is given, each step it takes, and the reasoning it writes before answering.</p>`
+    : itab === "thoughts" ? thoughtsHTML(r, streaming)
+    : itab === "actions" ? actionsHTML(r, streaming)
+    : perspectiveHTML(r, idx);
+  if (streaming && nearBottom && itab !== "perspective") body.scrollTop = body.scrollHeight;
+}
+
+function thoughtBlock(title, target, streaming) {
+  const { thinking, content } = splitThinking(target);
+  const still = streaming && target.streaming && !content;
+  if (thinking) return `<div class="isect">${esc(title)}${still ? " · thinking…" : ""}</div><div class="thoughts">${esc(thinking)}${still ? '<span class="caret">▍</span>' : ""}</div>`;
+  if (still) return `<div class="isect">${esc(title)}</div><p class="note">Waiting for the first token…</p>`;
+  if (target.waiting) return `<div class="isect">${esc(title)}</div><p class="note">Waiting for its turn…</p>`;
+  return `<div class="isect">${esc(title)}</div><p class="note">No visible reasoning: this model answers straight away without a thinking step. Reasoning models such as qwen3 write out their thoughts, and they appear here live.</p>`;
+}
+function thoughtsHTML(r, streaming) {
+  if (r.kind === "swarm") {
+    if (!r.agents.length) return `<p class="note">The swarm is getting started…</p>`;
+    return r.agents.map((a) => {
+      const text = a.thinking + (a.liveThinking ? (a.thinking ? "\n\n— now —\n\n" : "") + a.liveThinking : "");
+      return `<div class="isect">${esc(a.icon + " " + a.name)} · ${esc(a.status)}</div>` + (text
+        ? `<div class="thoughts">${esc(text)}${a.liveThinking ? '<span class="caret">▍</span>' : ""}</div>`
+        : `<p class="note">${a.live ? "Writing (no separate reasoning)…" : "No visible reasoning: this model answers without a thinking step."}</p>`);
+    }).join("") + `<p class="note small">Each agent's reasoning is text it writes before acting. It shows how the agent worked, but it isn't a complete record of everything that shaped its actions.</p>`;
+  }
+  if (r.kind === "image") {
+    const writing = r.streaming && r.promptMsgs && !r.image?.prompt;
+    let h = r.promptMsgs
+      ? thoughtBlock(`${r.opts.model} writing the prompt`, { thinking: r.thinking, content: r.content || (r.image?.prompt ? "x" : ""), expectThink: r.expectThink, streaming: writing }, streaming)
+      : `<p class="note">Prompt writing was skipped, so there's no reasoning for this picture.</p>`;
+    if (r.content && writing) h += `<div class="isect">Prompt being written</div><div class="thoughts">${esc(splitThinking(r).content)}<span class="caret">▍</span></div>`;
+    h += `<p class="note small">The image engine itself doesn't reason in words: it turns the prompt into a picture by refining random noise over ${r.image?.steps || "several"} steps.</p>`;
+    return h;
+  }
+  let h = r.compare
+    ? r.compare.map((c) => thoughtBlock(c.model, c, streaming)).join("")
+    : thoughtBlock(`${r.opts?.model || "Model"}'s reasoning`, { ...r, streaming: r.streaming }, streaming);
+  if (r.reviewThinking) {
+    h += `<div class="isect">Quality reviewer's reasoning</div><div class="thoughts">${esc(r.reviewThinking)}${r.gate === "checking" ? '<span class="caret">▍</span>' : ""}</div>`;
+  } else if (r.gate === "checking") {
+    h += `<div class="isect">Quality reviewer</div><p class="note">Reviewing the draft…</p>`;
+  }
+  h += `<p class="note small">Reasoning is text the model writes before its answer. It shows how the model worked through the problem, but it isn't a complete record of everything that shaped the answer.</p>`;
+  return h;
+}
+
+function actionsHTML(r, streaming) {
+  let h = "";
+  const s = r.stats;
+  if (r.kind === "swarm") {
+    const uses = r.agents.flatMap((a) => a.steps);
+    const end = streaming ? Date.now() : r.trace.start + (r.trace.events.at(-1)?.t || 0);
+    const cards = [
+      [r.agents.length, "agents"], [uses.length, "tool uses"], [uses.filter((u) => u.status === "error").length, "tool errors"],
+      [uses.filter((u) => u.status === "denied").length, "you declined"], [r.files?.length || 0, "files saved"], [fmtMs(end - r.trace.start), "total time"],
+    ];
+    h += `<div class="stats">${cards.map(([b, l]) => `<div class="stat"><b>${b}</b><span>${l}</span></div>`).join("")}</div>`;
+  } else if (s) {
+    const tps = s.eval_count / (s.eval_duration / 1e9);
+    const used = ctxUsed(r), max = r.opts?.numCtx || settings.numCtx;
+    const cards = [
+      [s.prompt_eval_count ?? "–", "new tokens read"],
+      [s.eval_count, "tokens written"],
+      [tps.toFixed(1), "tokens / sec"],
+      [fmtSec(s.prompt_eval_duration || 0), "reading prompt"],
+      [fmtSec(s.load_duration || 0), "loading model"],
+      [fmtSec(s.total_duration), "answer total"],
+      [`${Math.min(100, Math.round((used / max) * 100))}%`, `of ${fmtK(max)} context used`],
+    ];
+    if (r.reviewStats) cards.push([fmtSec(r.reviewStats.total_duration), "quality check"]);
+    h += `<div class="stats">${cards.map(([b, l]) => `<div class="stat"><b>${b}</b><span>${l}</span></div>`).join("")}</div>`;
+  }
+  const evs = r.trace?.events || [];
+  if (!evs.length) return h + `<p class="note">No action log for this reply. It was sent before the AI view existed.</p>`;
+  h += `<div class="isect">Steps</div><ul class="timeline">` + evs.map((e, i) => {
+    const cls = e.warn ? "warn" : streaming && i === evs.length - 1 ? "active" : "done";
+    return `<li class="${cls}"><span class="t">+${fmtMs(e.t)}</span>${esc(e.label)}${e.detail ? `<div class="d">${esc(e.detail)}</div>` : ""}</li>`;
+  }).join("") + `</ul>`;
+  return h;
+}
+
+const pmsgHTML = (m, open) =>
+  `<details class="pmsg"${open ? " open" : ""}><summary><span class="role ${m.role}">${m.role}</span><span class="pv">${esc(m.content.slice(0, 80).replace(/\s+/g, " "))}</span>${
+    m.images?.length ? `<span class="tag">+${m.images.length} image${m.images.length > 1 ? "s" : ""}</span>` : ""}</summary><pre>${esc(m.content)}</pre></details>`;
+
+function perspectiveHTML(r, idx) {
+  if (!r.opts) return `<p class="note">The model's view is recorded for replies sent after the AI view was added.</p>`;
+  if (r.kind === "swarm") {
+    let h = `<p class="note">Each agent sees only its own conversation below: its instructions, its task, and the results of its own tool uses. Agents learn about each other only through the results passed between them.</p>` +
+      `<div class="kv"><span>Model</span><b>${esc(r.opts.model)}</b><span>Mode</span><b>${esc(r.opts.preset)}</b><span>Approvals</span><b>${esc(settings.approvals)}</b></div>`;
+    for (const a of r.agents)
+      h += `<div class="isect">${esc(a.icon + " " + a.name)} · tools: ${esc(a.tools.join(", ") || "none")}</div>` + a.messages.map((m, i) => pmsgHTML(m, i === 1)).join("");
+    return h;
+  }
+  if (r.kind === "image") {
+    const im = r.image || {};
+    let h = `<p class="note">A picture is made in two steps. Each one only sees what's listed here.</p>`;
+    if (r.promptMsgs) h += `<div class="isect">1 · ${esc(r.opts.model)} was asked to write the prompt</div>` + r.promptMsgs.map((m, i) => pmsgHTML(m, i === 1)).join("");
+    else h += `<div class="isect">1 · Prompt writing</div><p class="note">Skipped: your own words were used as the prompt.</p>`;
+    h += `<div class="isect">2 · The image engine (SDXL) received</div>`;
+    h += pmsgHTML({ role: "prompt", content: im.prompt || "(not ready yet)" }, true) + pmsgHTML({ role: "avoid", content: im.negative || "" }, false);
+    h += `<div class="kv"><span>Size</span><b>${esc((im.size || "").replace("x", " × "))}</b><span>Steps</span><b>${im.steps ?? "–"}</b><span>Seed</span><b>${im.seed ?? "–"}</b></div>`;
+    h += `<p class="note small">The image engine sees only the prompt text, not your chat. Earlier messages, memory and presets don't reach it except through the prompt.</p>`;
+    return h;
+  }
+  const msgs = [];
+  if (r.sys) msgs.push({ role: "system", content: r.sys });
+  msgs.push(...buildHistory(current, idx, canSee(r.opts.model) !== false));
+  const chars = msgs.reduce((n, m) => n + m.content.length, 0);
+  const max = r.opts.numCtx || settings.numCtx;
+  const used = ctxUsed(r) || Math.round(chars / 3.5);
+  let h = `<p class="note">This is everything the model was given for this reply. It has no memory or knowledge of you beyond this list, and no internet access.</p>` +
+    `<div class="kv"><span>Model</span><b>${esc(r.compare ? r.compare.map((c) => c.model).join(" and ") : r.opts.model)}</b>` +
+    `<span>Preset</span><b>${esc(r.opts.preset)}</b><span>Temperature</span><b>${r.opts.temperature}</b>` +
+    `<span>Input</span><b>${msgs.length} messages, about ${fmtK(Math.round(chars / 3.5))} tokens</b>` +
+    `<span>Context</span><b>≈${fmtK(used)} of ${fmtK(max)} tokens</b></div>` +
+    `<div class="bar"><i style="width:${Math.min(100, (used / max) * 100)}%;${used > max * 0.85 ? "background:var(--warn)" : ""}"></i></div>`;
+  if (r.compare) h += `<p class="note">Both models received exactly the same input.</p>`;
+  h += `<div class="isect">Messages, in order</div>` + msgs.map((m, i) => pmsgHTML(m, m.role === "system" || i === msgs.length - 1)).join("");
+  if (r.reviewMsgs) h += `<div class="isect">What the quality reviewer was given</div>` + r.reviewMsgs.map((m) => pmsgHTML(m, false)).join("");
+  return h;
+}
+
+// ================= talking to Ollama =================
+function ev(reply, label, detail = "", warn = false) {
+  reply.trace ??= { start: Date.now(), events: [] };
+  reply.trace.events.push({ t: Date.now() - reply.trace.start, label, detail, ...(warn ? { warn } : {}) });
+  scheduleInspector();
+}
+async function streamChat(model, messages, options, onChunk, signal) {
+  const r = await fetch("/api/chat", {
+    method: "POST", signal,
+    body: JSON.stringify({ model, messages, stream: true, options }),
+  });
+  if (!r.ok && !r.body) throw new Error(`Ollama error ${r.status}`);
+  const reader = r.body.getReader();
+  const decoder = new TextDecoder();
+  const out = { content: "", thinking: "" };
+  let buf = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const lines = buf.split("\n"); buf = lines.pop();
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      const d = JSON.parse(line);
+      if (d.error) throw new Error(d.error);
+      out.content += d.message?.content || "";
+      out.thinking += d.message?.thinking || "";
+      if (d.done) out.stats = d;
+    }
+    onChunk(out);
+  }
+  if (buf.trim()) { const d = JSON.parse(buf); if (d.error) throw new Error(d.error); }
+  return out;
+}
+function systemFor(chat, passages = []) {
+  const p = presetById(chat.presetId);
+  let s = p.system || "";
+  if (passages.length) s += "\n\nPassages from the user's own documents that may help (mention the document name when you use one; ignore any that aren't relevant):\n" +
+    passages.map((x, i) => `[${i + 1}] From "${x.document}":\n${x.text}`).join("\n\n");
+  if (p.expectations.length) s += "\n\nEvery answer must meet these requirements:\n" + p.expectations.map((e) => "- " + e).join("\n");
+  if (memory.enabled && memory.items.length) s += "\n\nThings you know about the user (use them when relevant, don't recite them):\n" + memory.items.map((e) => "- " + e).join("\n");
+  if (chat.system?.trim()) s += "\n\nAdditional instructions for this chat:\n" + chat.system.trim();
+  return s.trim();
+}
+// The messages the model sees, in Ollama's format, for everything before message `idx`.
+function buildHistory(chat, idx, includeImages = true) {
+  return chat.messages.slice(0, idx).map((m) => {
+    if (m.role === "assistant") return { role: "assistant", content: splitThinking(m).content };
+    const atts = m.attachments || [];
+    let content = m.content;
+    for (const f of atts.filter((a) => a.kind === "text")) content += `\n\n--- Attached file: ${f.name} ---\n${f.text}\n--- End of ${f.name} ---`;
+    const imgs = atts.filter((a) => a.kind === "image");
+    const msg = { role: "user", content };
+    if (imgs.length) {
+      if (includeImages) msg.images = imgs.map((a) => a.data);
+      else for (const a of imgs) msg.content += a.ocrText
+        ? `\n\n[Text found in the attached picture "${a.name}" (read with OCR, may contain mistakes):\n${a.ocrText}]`
+        : `\n\n[A picture "${a.name}" was attached, but this model can't see images and no text was found in it]`;
+    }
+    return msg;
+  });
+}
+
+// Generate one answer into `target` (the reply itself, or one side of a comparison).
+async function generate(chat, reply, target, model, sys, signal, label = "") {
+  const idx = chat.messages.indexOf(reply);
+  await getCaps(model);
+  const history = buildHistory(chat, idx, canSee(model) !== false);
+  if (sys) history.unshift({ role: "system", content: sys });
+  reply.inChars = history.reduce((n, m) => n + m.content.length, 0);
+  Object.assign(target, { expectThink: !!thinkers[model], streaming: true, waiting: false });
+  const L = label ? label + ": " : "";
+  const t0 = Date.now();
+  let sawThink = false, sawWrite = false;
+  try {
+    const out = await streamChat(model, history, { temperature: reply.opts.temperature, num_ctx: settings.numCtx }, (o) => {
+      target.content = o.content; target.thinking = o.thinking;
+      const st = splitThinking(target);
+      if (st.thinking && !sawThink) { sawThink = true; ev(reply, L + "Started thinking", `first token after ${fmtMs(Date.now() - t0)}`); }
+      if (st.content.trim() && !sawWrite) {
+        sawWrite = true;
+        ev(reply, L + (sawThink ? "Finished thinking, started writing the answer" : "Started writing the answer"),
+          sawThink ? `${st.thinking.split(/\s+/).length} words of reasoning` : `first token after ${fmtMs(Date.now() - t0)}`);
+      }
+      if (current === chat) renderMessages();
+    }, signal);
+    target.stats = out.stats || null;
+    learnThinker(model, out);
+    const s = target.stats;
+    ev(reply, L + "Finished the answer", s ? `${s.eval_count} tokens at ${(s.eval_count / (s.eval_duration / 1e9)).toFixed(1)} tokens/sec${s.load_duration > 1e9 ? ` · loading the model took ${fmtSec(s.load_duration)}` : ""}` : "");
+    const used = ctxUsed({ stats: s, inChars: reply.inChars });
+    if (used && used > settings.numCtx * 0.9)
+      ev(reply, L + "Context almost full", `≈${fmtK(used)} of ${fmtK(settings.numCtx)} tokens. The oldest messages may be cut off. Raise the context length in Settings → General or start a new chat.`, true);
+    return out;
+  } finally {
+    target.streaming = false;
+  }
+}
+
+// Quality gate: review the draft against the preset's expectations; keep it or replace it with a revision.
+async function qualityGate(chat, reply, userText, signal) {
+  const p = presetById(chat.presetId);
+  const draft = splitThinking(reply).content.trim();
+  reply.gate = "checking";
+  if (current === chat) renderMessages();
+  const review = [
+    { role: "system", content: "You are a strict quality reviewer. You check a draft answer against a list of requirements and fix it if needed. You never comment on the content's subject matter; you only judge it against the requirements." },
+    { role: "user", content:
+      `REQUIREMENTS:\n${p.expectations.map((e, i) => `${i + 1}. ${e}`).join("\n")}\n\n` +
+      `ORIGINAL REQUEST:\n${userText}\n\n` +
+      (p.system ? `ROLE THE ANSWER WAS WRITTEN IN:\n${p.system}\n\n` : "") +
+      `DRAFT ANSWER:\n${draft}\n\n` +
+      `Check the draft against every requirement.\n` +
+      `- If it meets all of them, reply with only the word PASS.\n` +
+      `- If it misses any, reply with the word REVISED on the first line, then the complete corrected answer (the full answer the user should see, not a list of changes).` },
+  ];
+  reply.reviewMsgs = review;
+  reply.reviewThinking = "";
+  ev(reply, "Started quality check", `Reviewing the draft against ${p.expectations.length} expectations`);
+  try {
+    const model = reply.opts.model;
+    const expectThink = !!thinkers[model];
+    const out = await streamChat(model, review, { temperature: 0.2, num_ctx: settings.numCtx }, (o) => {
+      reply.reviewThinking = splitThinking({ ...o, expectThink, streaming: true }).thinking; scheduleInspector();
+    }, signal);
+    reply.reviewThinking = splitThinking(out).thinking;
+    reply.reviewStats = out.stats || null;
+    const took = out.stats ? ` (${fmtSec(out.stats.total_duration)})` : "";
+    const text = splitThinking(out).content.trim();
+    if (/^\W*PASS\b/i.test(text)) {
+      reply.gate = "pass";
+      ev(reply, "Verdict: PASS", "The draft meets every expectation, so it was kept as written" + took);
+    } else if (/^\W*REVISED\b/i.test(text) && text.replace(/^\W*REVISED\b\W*/i, "").trim().length > 20) {
+      const st = splitThinking(reply);
+      reply.thinking = st.thinking;
+      reply.original = draft;
+      reply.content = text.replace(/^\W*REVISED\b[*:\s]*/i, "");
+      reply.gate = "revised";
+      ev(reply, "Verdict: REVISED", "The draft missed something, so it was replaced with the reviewer's rewrite" + took);
+    } else {
+      reply.gate = "unclear";
+      ev(reply, "Verdict unclear", `Reviewer replied "${text.slice(0, 80)}${text.length > 80 ? "…" : ""}", so the original was kept`);
+    }
+  } catch (err) {
+    reply.gate = err.name === "AbortError" ? "skipped" : "failed";
+    ev(reply, err.name === "AbortError" ? "Quality check stopped by you" : "Quality check failed", err.name === "AbortError" ? "" : err.message);
+  }
+}
+
+// Ask the model for a short title once the first answer is in.
+async function autoTitle(chat) {
+  chat.autoTitled = true;
+  const first = chat.messages.find((m) => m.role === "user");
+  const model = $("model").value;
+  if (!first || !model) return;
+  try {
+    const r = await fetch("/api/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        model, stream: false,
+        messages: [{ role: "user", content: `${thinkers[model] ? "/no_think " : ""}Write a short title of 2 to 6 words for a conversation that starts with the message below. Reply with only the title: no quotes, no punctuation at the end.\n\nMessage: ${(first.content || first.attachments?.[0]?.name || "").slice(0, 600)}` }],
+        options: { temperature: 0.3, num_ctx: settings.numCtx, num_predict: 60 },
+      }),
+    });
+    const d = await r.json();
+    let t = splitThinking({ content: d.message?.content || "", thinking: d.message?.thinking || "" }).content;
+    t = t.split("\n").map((s) => s.trim()).find(Boolean) || "";
+    t = t.replace(/^(title|chat title)\s*:\s*/i, "").replace(/^["'*#\s]+|["'*.\s]+$/g, "").slice(0, 60);
+    if (t.length >= 3) { chat.title = t; saveAll(); renderSidebar(); }
+  } catch {}
+}
+
+// ================= sending =================
+const input = $("input");
+input.oninput = () => { input.style.height = "auto"; input.style.height = input.scrollHeight + "px"; };
+input.onkeydown = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("form").requestSubmit(); } };
+function setBusy(b) {
+  $("send").textContent = b ? "Stop" : "Send";
+  $("send").classList.toggle("stop", b);
+}
+
+async function runTurn(chat) {
+  const p = presetById(chat.presetId);
+  const m1 = $("model").value;
+  const m2 = settings.compare ? $("model2").value : "";
+  if (!m1) return toast("No model available. Is Ollama running?");
+  const models = m2 && m2 !== m1 ? [m1, m2] : [m1];
+  const userMsg = chat.messages.at(-1);
+  const reply = { role: "assistant", content: "", thinking: "", trace: { start: Date.now(), events: [] } };
+  chat.messages.push(reply);
+  selectedIdx = null; editingIdx = null;
+  controller = new AbortController();
+  setBusy(true);
+  saveAll(); render();
+
+  let passages = [];
+  if (settings.useLibrary) {
+    passages = await libraryContext(userMsg.content);
+    ev(reply, "Searched your library", passages.length ? `${passages.length} relevant passage${passages.length > 1 ? "s" : ""} from ${[...new Set(passages.map((x) => x.document))].join(", ")}` : "nothing relevant found");
+  }
+  const sys = systemFor(chat, passages);
+  reply.sys = sys;
+  reply.opts = { model: m1, temperature: chat.temperature ?? 0.8, preset: p.icon + " " + p.name, numCtx: settings.numCtx };
+  const atts = userMsg.attachments || [];
+  ev(reply, "Read your message", `${userMsg.content.length} characters` + (atts.length ? ` + ${atts.length} attachment${atts.length > 1 ? "s" : ""} (${atts.map((a) => a.name).join(", ")})` : ""));
+  ev(reply, "Built the prompt", [
+    sys ? `${p.name} instructions` : "no system prompt",
+    p.expectations.length ? `${p.expectations.length} expectations` : "",
+    memory.enabled && memory.items.length ? `${memory.items.length} memories` : "",
+    chat.system?.trim() ? "extra instructions" : "",
+    `${chat.messages.length - 1} chat messages`,
+  ].filter(Boolean).join(" + "));
+
+  try {
+    if (models.length === 1) {
+      ev(reply, "Sent to " + m1, `temperature ${reply.opts.temperature} · context window ${fmtK(settings.numCtx)} tokens`);
+      reply.streaming = true;
+      await generate(chat, reply, reply, m1, sys, controller.signal);
+      if (p.expectations.length && splitThinking(reply).content.trim()) {
+        if (settings.gate) await qualityGate(chat, reply, userMsg.content, controller.signal);
+        else ev(reply, "Skipped quality check", "Quality check is turned off");
+      }
+    } else {
+      reply.compare = models.map((m, k) => ({ model: m, content: "", thinking: "", waiting: k > 0 }));
+      reply.chosen = 0;
+      for (let k = 0; k < models.length; k++) {
+        ev(reply, "Sent to " + models[k], k ? "same input as the first model" : `temperature ${reply.opts.temperature} · context window ${fmtK(settings.numCtx)} tokens`);
+        try {
+          await generate(chat, reply, reply.compare[k], models[k], sys, controller.signal, models[k]);
+        } catch (e) {
+          if (e.name === "AbortError") throw e;
+          reply.compare[k].error = e.message;
+          ev(reply, models[k] + ": error", e.message, true);
+        }
+      }
+      chooseCompare(reply, reply.compare.findIndex((c) => !c.error && c.content));
+      if (p.expectations.length) ev(reply, "Skipped quality check", "Not used in compare mode");
+      ev(reply, "Both answers ready", "The first is kept in the conversation unless you pick the other");
+    }
+    ev(reply, "Done", `total ${fmtMs(Date.now() - reply.trace.start)}`);
+    if (settings.autoRead && !reply.compare) speak(splitThinking(reply).content);
+  } catch (err) {
+    if (err.name === "AbortError") ev(reply, "Stopped by you");
+    else { reply.error = /model .* not found/i.test(err.message) ? `${err.message}. It may have been deleted; pick another model.` : err.message; ev(reply, "Error", err.message, true); }
+  } finally {
+    reply.streaming = false;
+    reply.compare?.forEach((c) => { c.streaming = false; c.waiting = false; });
+    controller = null;
+    setBusy(false);
+    saveAll(true);
+    if (current === chat) renderMessages();
+    updateCtxMeter();
+  }
+  if (settings.autoTitle && !chat.autoTitled && !reply.error) autoTitle(chat);
+}
+
+// Replies to the last user message: a picture if that's what was asked for, otherwise a chat answer.
+const respond = (chat) => {
+  const last = chat.messages.at(-1);
+  return last?.swarmMode ? runSwarm(chat) : last?.imageRequest ? runImage(chat) : runTurn(chat);
+};
+
+function parseImagePrompt(text) {
+  const grab = (re) => (text.match(re)?.[1] || "").replace(/\s*\n\s*/g, " ").replace(/^[\s*"'`]+|[\s*"'`]+$/g, "").trim();
+  return {
+    prompt: grab(/(?:^|\n)[\s*#]*Prompt\s*\**\s*:\s*\**\s*([\s\S]+?)(?=\n[\s*#]*(?:Negative|Settings|Variation)|$)/i),
+    negative: grab(/(?:^|\n)[\s*#]*Negative prompt\s*\**\s*:\s*\**\s*([\s\S]+?)(?=\n[\s*#]*(?:Settings|Variation|Prompt)|$)/i),
+  };
+}
+
+async function runImage(chat) {
+  const userMsg = chat.messages.at(-1);
+  const m1 = $("model").value;
+  const [w, h] = settings.imgSize.split("x").map(Number);
+  const reply = { role: "assistant", kind: "image", content: "", thinking: "", image: { status: "Getting ready…", size: settings.imgSize }, trace: { start: Date.now(), events: [] } };
+  chat.messages.push(reply);
+  selectedIdx = null; editingIdx = null;
+  controller = new AbortController();
+  setBusy(true);
+  reply.streaming = true;
+  reply.opts = { model: m1, temperature: 0.8, preset: "🖼 Picture", numCtx: settings.numCtx };
+  saveAll(); render();
+  const t0 = Date.now();
+  const redraw = () => { if (current === chat) renderMessages(); };
+  ev(reply, "Read your picture request", `${userMsg.content.length} characters`);
+  try {
+    let prompt = userMsg.content, negative = "";
+    if (settings.imgEnhance && m1) {
+      // 1. The chat model turns the description into a detailed prompt (Image Prompts preset)
+      const ip = presets.find((p) => p.id === "image") || DEFAULT_PRESETS.find((p) => p.id === "image");
+      reply.sys = ip.system +
+        (ip.expectations?.length ? "\n\nThe prompt must meet these requirements:\n" + ip.expectations.filter((e) => !/variation/i.test(e)).map((e) => "- " + e).join("\n") : "") +
+        "\n\nWrite a rich prompt of 25 to 60 words. The Negative prompt is a comma-separated list of short keywords (like: blurry, watermark, extra fingers), never a sentence. Give exactly one Prompt and one Negative prompt, then stop. No variations.";
+      reply.promptMsgs = [{ role: "system", content: reply.sys }, { role: "user", content: userMsg.content }];
+      reply.image.status = `Writing a detailed prompt with ${m1}…`; redraw();
+      ev(reply, "Writing a detailed image prompt", `${m1} turns your description into a prompt using the Image Prompts preset`);
+      reply.expectThink = !!thinkers[m1];
+      const out = await streamChat(m1, reply.promptMsgs, { temperature: 0.8, num_ctx: settings.numCtx }, (o) => {
+        reply.thinking = o.thinking; reply.content = o.content; scheduleInspector();
+      }, controller.signal);
+      learnThinker(m1, out);
+      reply.stats = out.stats || null;
+      const parsed = parseImagePrompt(splitThinking(out).content);
+      if (parsed.prompt) { prompt = parsed.prompt; negative = parsed.negative; ev(reply, "Prompt ready", prompt.slice(0, 200)); }
+      else ev(reply, "Couldn't read a prompt from the model's answer", "Using your own words instead", true);
+      reply.content = "";
+    } else {
+      ev(reply, "Using your words as the prompt", "Prompt writing is off in Settings → General");
+    }
+    const ex = imageEngine.extras || {};
+    const fast = settings.fastPictures && ex.fast;
+    const ref = (userMsg.attachments || []).find((a) => a.kind === "image");
+    const refMode = ref ? settings.refMode : null;
+    reply.image = { ...reply.image, prompt, negative: negative || "blurry, low quality, lowres, jpeg artifacts, watermark, signature, text, deformed, extra fingers, bad anatomy",
+      steps: fast ? 4 : settings.imgSteps, fast, refMode, status: "Sending to the image engine…" };
+    redraw();
+
+    // 2. ComfyUI draws it; progress streams back from the server
+    ev(reply, "Sent to the image engine", `SDXL${fast ? " + Lightning (fast mode)" : ""} · ${w} × ${h} · ${reply.image.steps} steps` +
+      (ref ? ` · your picture as ${refMode === "both" ? "style reference and outline" : refMode === "outline" ? "an outline (ControlNet)" : "a style reference (IP-Adapter)"}` : ""));
+    const r = await fetch("/image", { method: "POST", signal: controller.signal,
+      body: JSON.stringify({ prompt, negative: reply.image.negative, width: w, height: h, steps: settings.imgSteps, fast, refMode, refImageB64: ref?.data }) });
+    const reader = r.body.getReader(), dec = new TextDecoder();
+    let buf = "", lastStage = "", drawStart = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split("\n"); buf = lines.pop();
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const d = JSON.parse(line);
+        if (d.stage === "error") throw new Error(d.error);
+        if (d.seed != null) reply.image.seed = d.seed;
+        if (d.stage === "drawing") {
+          if (!drawStart) { drawStart = Date.now(); ev(reply, "Drawing", `${d.max} steps`); }
+          Object.assign(reply.image, { value: d.value, max: d.max, status: "Drawing…" });
+        } else if (d.message) {
+          reply.image.status = d.message;
+          if (d.message !== lastStage && d.message !== "Drawing…") { lastStage = d.message; ev(reply, d.message.replace(/…$/, "")); }
+        }
+        if (d.stage === "done") {
+          reply.image.file = d.images[0];
+          reply.image.took = Date.now() - t0;
+          ev(reply, "Picture saved", `drawing took ${fmtMs(Date.now() - (drawStart || t0))} · saved in data\\images`);
+        }
+      }
+      redraw();
+    }
+    if (!reply.image.file) throw new Error("The image engine stopped without sending a picture.");
+    reply.content = `[I made a picture. Its prompt was: ${prompt}]`;
+    ev(reply, "Done", `total ${fmtMs(Date.now() - t0)}`);
+  } catch (err) {
+    if (err.name === "AbortError" || err.message === "Stopped") { reply.error = "Stopped."; ev(reply, "Stopped by you"); }
+    else { reply.error = err.message; ev(reply, "Error", err.message, true); }
+    reply.content = reply.content || "[The picture wasn't made]";
+  } finally {
+    reply.streaming = false;
+    controller = null;
+    setBusy(false);
+    saveAll(true);
+    redraw();
+    refreshImageEngine();
+  }
+  if (settings.autoTitle && !chat.autoTitled && !reply.error) autoTitle(chat);
+}
+
+async function askForImage(text) {
+  if (!text) return toast("Describe the picture you want first, then press 🖼");
+  if (!(await refreshImageEngine()).ready) return toast("Picture making isn't installed yet.");
+  const chat = current;
+  const atts = pending.filter((a) => a.kind === "image").slice(0, 1);   // an attached picture guides the new one
+  chat.messages.push({ role: "user", content: text, imageRequest: true, ...(atts.length ? { attachments: atts } : {}) });
+  if (chat.title === "New chat") chat.title = text.slice(0, 40);
+  pending = []; renderAttachRow();
+  input.value = ""; input.oninput();
+  await runImage(chat);
+}
+
+async function upscalePicture(m) {
+  if (controller) return;
+  controller = new AbortController();
+  setBusy(true);
+  m.image.upscaling = "Starting…";
+  renderMessages();
+  try {
+    const r = await fetch("/image", { method: "POST", signal: controller.signal, body: JSON.stringify({ kind: "upscale", image: m.image.file }) });
+    const reader = r.body.getReader(), dec = new TextDecoder();
+    let buf = "";
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split("\n"); buf = lines.pop();
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const d = JSON.parse(line);
+        if (d.stage === "error") throw new Error(d.error);
+        if (d.message) m.image.upscaling = d.message;
+        if (d.stage === "drawing") m.image.upscaling = `Upscaling… ${Math.round((d.value / d.max) * 100)}%`;
+        if (d.stage === "done") m.image.upscaled = d.images[0];
+      }
+      renderMessages();
+    }
+    if (!m.image.upscaled) throw new Error("No picture came back.");
+    toast("Upscaled picture ready");
+  } catch (e) {
+    if (e.name !== "AbortError") toast("Upscaling failed: " + e.message);
+  } finally {
+    delete m.image.upscaling;
+    controller = null; setBusy(false); saveAll(true); renderMessages();
+  }
+}
+$("imgBtn").onclick = () => { if (!controller) askForImage(input.value.trim()); };
+
+$("form").onsubmit = async (e) => {
+  e.preventDefault();
+  if (controller) { controller.abort(); return; }
+  const text = input.value.trim();
+  if (/^\/image\b/i.test(text)) return askForImage(text.replace(/^\/image\b\s*/i, "").trim());
+  if (/^\/remember\b/i.test(text)) {
+    const fact = text.replace(/^\/remember\b\s*/i, "").trim();
+    if (!fact) return toast("Type what to remember after /remember");
+    memory.items.push(fact); saveAll();
+    input.value = ""; input.oninput();
+    return toast(`Remembered: "${fact}"${memory.enabled ? "" : " (memory is turned off in Settings)"}`);
+  }
+  if (!text && !pending.length) return;
+  const pics = pending.filter((a) => a.kind === "image");
+  if (pics.length) {
+    await Promise.all(pics.map((a) => ocrJobs.get(a)));   // let OCR finish
+    for (const m of settings.mode !== "chat" ? [] : [$("model").value, settings.compare ? $("model2").value : ""].filter(Boolean)) {
+      await getCaps(m);
+      if (canSee(m) !== false) continue;
+      if (pics.some((a) => a.ocrText)) toast(`${m} can't see pictures, so it gets the text found in them instead.`);
+      else return toast(`${m} can't see pictures and no text was found in them. Pick a vision model such as gemma3 or llava (Settings → Models).`);
+    }
+  }
+  const chat = current;
+  const atts = pending;
+  const swarm = settings.mode !== "chat" ? { swarmMode: settings.mode } : {};
+  chat.messages.push({ role: "user", content: text, ...(atts.length ? { attachments: atts } : {}), ...swarm });
+  if (chat.title === "New chat") chat.title = (text || atts[0]?.name || "New chat").slice(0, 40);
+  pending = []; renderAttachRow();
+  input.value = ""; input.oninput();
+  await respond(chat);
+};
+
+// ================= agents & swarm =================
+const TOOL_INFO = {
+  list_files:   { group: "files", icon: "📂", verb: "looking at files", desc: 'List files in a workspace folder. args: {"path": "folder, or . for the top"}' },
+  read_file:    { group: "files", icon: "📄", verb: "reading a file", desc: 'Read a text file from the workspace. args: {"path": "file name"}' },
+  write_file:   { group: "files", icon: "💾", verb: "writing a file", desc: 'Create or replace a text file in the workspace. args: {"path": "file name", "content": "the full text"}' },
+  delete_file:  { group: "files", icon: "🗑️", verb: "deleting a file", desc: 'Delete a file or folder in the workspace. args: {"path": "file name"}' },
+  run_code:     { group: "code", icon: "▶️", verb: "running code", desc: 'Run Python or JavaScript and get what it prints (60 second limit). Python has numpy, pandas and matplotlib; charts you draw are saved to the workspace automatically. Files in the workspace folder are available, and files you save there are kept. Print the results you need. args: {"language": "python" or "javascript", "code": "the program"}' },
+  web_search:   { group: "web", icon: "🌐", verb: "searching the web", desc: 'Search the web. Returns titles, links and snippets. args: {"query": "search words"}' },
+  read_webpage: { group: "web", icon: "📰", verb: "reading a web page", desc: 'Read the text of a web page quickly (no JavaScript). args: {"url": "https://..."}' },
+  browse_page:  { group: "web", icon: "🧭", verb: "browsing a page", desc: 'Open a page in a real browser (runs JavaScript, so it works on modern sites) and get its text and links. Slower than read_webpage. args: {"url": "https://..."}' },
+  screenshot_page: { group: "web", icon: "📸", verb: "taking a screenshot", desc: 'Open a page in a real browser and save a screenshot to the workspace. args: {"url": "https://...", "path": "optional file name.png", "full_page": false}' },
+  search_library: { group: "library", icon: "📚", verb: "searching the library", desc: 'Search the user\'s own document library (notes, PDFs, files they added) by meaning, not just keywords. Returns the most relevant passages and which document each came from. args: {"query": "what to look for"}' },
+  read_image_text: { group: "files", icon: "🔤", verb: "reading text in a picture", desc: 'Read the text in an image file in the workspace (OCR). args: {"path": "image file name"}' },
+  make_picture: { group: "pictures", icon: "🎨", verb: "drawing a picture", desc: 'Draw a picture with the SDXL image model. args: {"prompt": "detailed description: subject, setting, style, lighting, composition"}' },
+};
+const GROUP_LABEL = { files: "📁 Workspace files (read, write, delete, read text in pictures)", code: "▶️ Run Python and JavaScript", web: "🌐 Web search, reading pages and a real browser", pictures: "🎨 Make pictures", library: "📚 Search your document library", mcp: "🔌 MCP tool servers" };
+const MODE_LABEL = { team: "🐝 Team", lead: "👑 Lead", debate: "⚖️ Debate" };
+const RISKY = ["delete_file", "web_search", "read_webpage", "browse_page", "screenshot_page"];
+const toolEnabled = (t) => !TOOL_INFO[t] || settings.toolGroups[TOOL_INFO[t].group] !== false;
+// "mcp:*" in an agent's tool list means "every connected MCP tool".
+const toolsFor = (spec) => [...new Set((spec.tools || []).flatMap((t) => (t === "mcp:*" ? Object.keys(TOOL_INFO).filter((k) => k.startsWith("mcp__")) : [t])))]
+  .filter((t) => TOOL_INFO[t] && toolEnabled(t));
+const abortErr = () => Object.assign(new Error("Stopped"), { name: "AbortError" });
+
+async function serverTool(name, args, signal) {
+  const r = await fetch("/tools/" + name, { method: "POST", signal,
+    body: JSON.stringify({ args, cfg: { wikipedia: settings.wikipedia, braveKey: settings.braveKey, engine: settings.searchEngine, fastPictures: settings.fastPictures } }) });
+  const d = await r.json();
+  return d.ok ? d.result : { error: d.error || "The tool failed." };
+}
+async function callTool(name, args, signal) {
+  if (name === "run_code" && settings.codeSandbox && caps2.sandbox) return sandboxRun(args, signal);
+  if (name.startsWith("mcp__")) {
+    const info = TOOL_INFO[name];
+    if (!info) return { error: "That MCP tool isn't connected any more." };
+    return serverTool("mcp_call", { server: info.mcpServer, tool: info.mcpTool, args }, signal);
+  }
+  return serverTool(name, args, signal);
+}
+async function needsApproval(name, args) {
+  if (settings.approvals === "never") return false;
+  if (settings.approvals === "all") return true;
+  if (RISKY.includes(name)) return true;
+  if (name === "run_code") return !(settings.codeSandbox && caps2.sandbox);   // sandboxed code can't touch your PC
+  if (name.startsWith("mcp__")) return !TOOL_INFO[name]?.trusted;            // unknown side effects
+  if (name === "write_file") return !!(await serverTool("file_exists", { path: args.path })).exists;   // overwriting
+  return false;
+}
+
+// ----- code sandbox (Pyodide / JavaScript in a locked-down worker) -----
+const sandboxes = {};
+async function sandboxRun({ language, code }, signal) {
+  const lang = /^(js|javascript|node)$/i.test(language || "") ? "javascript" : "python";
+  if (!code || !String(code).trim()) return { error: "No code was given." };
+  const files = lang === "python" ? (await serverTool("snapshot_workspace", {}, signal)).files || [] : [];
+  const sb = (sandboxes[lang] ||= { worker: new Worker("/sandbox-worker.js"), warm: false });
+  const id = Math.random().toString(36).slice(2);
+  const limit = 60000 + (lang === "python" && !sb.warm ? 90000 : 0);   // first run also loads Python itself
+  const result = await new Promise((resolve, reject) => {
+    const kill = () => { sb.worker.terminate(); delete sandboxes[lang]; };
+    const timer = setTimeout(() => { kill(); resolve({ timed_out: true, error: `The code ran longer than ${limit / 1000} seconds and was stopped.` }); }, limit);
+    const onAbort = () => { clearTimeout(timer); kill(); reject(abortErr()); };
+    signal?.addEventListener("abort", onAbort, { once: true });
+    sb.worker.onmessage = (e) => {
+      if (e.data.id !== id) return;
+      clearTimeout(timer); signal?.removeEventListener("abort", onAbort);
+      resolve(e.data.ok ? e.data.result : { error: e.data.error });
+    };
+    sb.worker.onerror = (e) => { clearTimeout(timer); kill(); resolve({ error: "The sandbox crashed: " + (e.message || "unknown error") }); };
+    sb.worker.postMessage({ id, language: lang, code, files });
+  });
+  if (result.error && !result.stdout) return { sandboxed: true, language: lang, ...result };
+  sb.warm = true;
+  const written = [];
+  for (const f of result.files || []) { const w = await serverTool("write_file_b64", { path: f.path, b64: f.b64 }, signal); if (w.path) written.push(w.path); }
+  const clip = (s, n) => (s && s.length > n ? s.slice(0, n) + "\n[...cut off]" : s || "");
+  return { sandboxed: true, language: lang, exit_code: result.exit_code, stdout: clip(result.stdout, 12000), stderr: clip(result.stderr, 6000), seconds: result.seconds, files_written: written };
+}
+
+// ----- MCP tools: turn each connected server's tools into agent tools -----
+let mcpState = { config: { servers: {} }, status: {}, presets: {} };
+async function refreshMcp() {
+  try { mcpState = await (await fetch("/mcp")).json(); } catch { return; }
+  for (const k of Object.keys(TOOL_INFO)) if (k.startsWith("mcp__")) delete TOOL_INFO[k];
+  for (const [server, st] of Object.entries(mcpState.status || {})) {
+    for (const t of st.tools || []) {
+      const props = Object.entries(t.inputSchema?.properties || {}).map(([k, v]) => `"${k}": ${v.type || "value"}${(t.inputSchema.required || []).includes(k) ? "" : " (optional)"}`).join(", ");
+      TOOL_INFO[`mcp__${server}__${t.name}`.replace(/[^\w]/g, "_")] = { group: "mcp", icon: "🔌", verb: `using ${server}`, mcpServer: server, mcpTool: t.name, trusted: st.trusted,
+        desc: `${(t.description || "MCP tool").split("\n")[0].slice(0, 300)} (MCP server "${server}"). args: {${props}}` };
+    }
+  }
+}
+
+// Models sometimes put raw line breaks inside JSON strings; escape them so the JSON still parses.
+function lenientJSON(text) {
+  const start = text.indexOf("{"), end = text.lastIndexOf("}");
+  if (start < 0 || end <= start) return null;
+  let s = text.slice(start, end + 1);
+  try { return JSON.parse(s); } catch {}
+  let out = "", inStr = false, escp = false;
+  for (const ch of s) {
+    if (inStr) {
+      if (escp) { out += ch; escp = false; continue; }
+      if (ch === "\\") { out += ch; escp = true; continue; }
+      if (ch === '"') { inStr = false; out += ch; continue; }
+      out += ch === "\n" ? "\\n" : ch === "\r" ? "" : ch === "\t" ? "\\t" : ch;
+    } else { if (ch === '"') inStr = true; out += ch; }
+  }
+  try { return JSON.parse(out); } catch { return null; }
+}
+const extractFinal = (t) => {
+  const m = t.match(/<final>\s*([\s\S]*?)\s*(?:<\/final>|$)/i);
+  return (m ? m[1] : t.replace(/<tool>[\s\S]*$/i, "")).trim();
+};
+// Names small models often invent, mapped to the real tools.
+const TOOL_ALIASES = {
+  execute_code: "run_code", run_python: "run_code", python: "run_code", execute_python: "run_code", code_interpreter: "run_code", run_javascript: "run_code", exec: "run_code",
+  search: "web_search", google: "web_search", internet_search: "web_search", search_web: "web_search", websearch: "web_search",
+  open_url: "read_webpage", browse: "read_webpage", fetch_url: "read_webpage", read_url: "read_webpage", visit: "read_webpage", open_webpage: "read_webpage",
+  save_file: "write_file", create_file: "write_file", write: "write_file", edit_file: "write_file",
+  open_file: "read_file", cat: "read_file", ls: "list_files", list_directory: "list_files", list_dir: "list_files", remove_file: "delete_file",
+  draw: "make_picture", generate_image: "make_picture", create_image: "make_picture", image: "make_picture",
+};
+function parseAgentReply(text, allowed) {
+  const p = parseAgentReplyRaw(text, allowed);
+  if (p.tool && !allowed.includes(p.tool) && TOOL_ALIASES[p.tool]) p.tool = TOOL_ALIASES[p.tool];
+  return p;
+}
+function parseAgentReplyRaw(text, allowed) {
+  const tool = text.match(/<tool>\s*([\s\S]*?)\s*(?:<\/tool>|$)/i);
+  const finalTag = /<final>/i.test(text);
+  if (tool && !(finalTag && text.search(/<final>/i) < text.search(/<tool>/i))) {
+    const j = lenientJSON(tool[1]);
+    if (j?.name) {
+      const args = j.args || j.arguments || j.parameters || {};
+      // Code or file text given as a fenced block instead of inside the JSON: use the block.
+      const block = text.match(/```(\w*)\n([\s\S]*?)```/);
+      if (j.name === "run_code" && !args.code && block) { args.code = block[2]; args.language ||= block[1] || "python"; }
+      if (j.name === "write_file" && args.content == null && block) args.content = block[2];
+      return { tool: j.name, args };
+    }
+    return { tool: "invalid", args: { raw: tool[1].slice(0, 300) } };
+  }
+  if (finalTag) return { final: extractFinal(text) };
+  const bare = !text.includes("<final") && lenientJSON(text);
+  if (bare?.name && allowed.includes(bare.name)) return { tool: bare.name, args: bare.args || {} };
+  return { final: text.trim() };
+}
+function agentSystem(spec, tools, max, extraDesc = {}, extra = "") {
+  const lines = tools.map((t) => `- ${t}: ${TOOL_INFO[t]?.desc || extraDesc[t]}`).join("\n");
+  const about = memory.enabled && memory.items.length ? `\n\nAbout the user:\n${memory.items.map((m) => "- " + m).join("\n")}` : "";
+  return `You are ${spec.name}, one agent in a team of AI agents working for the user on their own computer.
+${spec.role}${extra ? "\n\n" + extra : ""}${about}
+
+${tools.length ? `TOOLS you can use:
+${lines}
+
+To use a tool, write ONE tool call, then stop and wait for its result:
+<tool>{"name": "tool_name", "args": {...}}</tool>
+The JSON must be valid: write new lines inside strings as \\n. After each result you may use another tool. You can use at most ${max} tools.` : "You have no tools. Work from your own knowledge and the material you're given."}
+
+When you're finished, write your complete result inside <final>...</final>. Only the text inside <final> is passed on, so make it complete on its own.
+Never pretend you used a tool or invent its results. If a tool fails or is declined, you don't have its result: adapt, or say plainly in your <final> result what couldn't be done. Answer in the user's language.`;
+}
+const argSummary = (tool, a = {}) => {
+  switch (tool) {
+    case "run_code": return `${a.language || "python"}, ${String(a.code || "").split("\n").length} lines`;
+    case "web_search": return `"${a.query || ""}"`;
+    case "read_webpage": case "browse_page": case "screenshot_page": return a.url || "";
+    case "search_library": return `"${a.query || ""}"`;
+    case "make_picture": return String(a.prompt || "").slice(0, 80);
+    case "delegate": return `${a.agent || "helper"}: ${String(a.task || "").slice(0, 90)}`;
+    case "invalid": return "couldn't read the tool call";
+    default: return a.path || (tool.startsWith("mcp__") ? JSON.stringify(a).slice(0, 90) : "");
+  }
+};
+function resultSummary(s) {
+  const r = s.result || {};
+  if (r.error) return "⚠️ " + r.error;
+  switch (s.tool) {
+    case "run_code": return `${r.sandboxed ? "🔒 sandbox · " : ""}${r.timed_out ? "timed out" : `exit code ${r.exit_code}`} · ${r.seconds}s${r.files_written?.length ? ` · saved ${r.files_written.join(", ")}` : ""}${r.stdout ? " · " + r.stdout.trim().split("\n")[0].slice(0, 80) : ""}`;
+    case "browse_page": return `${r.title || r.url} · ${r.links?.length || 0} links`;
+    case "screenshot_page": return `saved ${r.path}`;
+    case "search_library": return `${r.results?.length || 0} passages${r.results?.length ? " from " + [...new Set(r.results.map((x) => x.document))].slice(0, 3).join(", ") : ""}`;
+    case "read_image_text": return `${(r.text || "").length} characters of text`;
+    case "web_search": return `${r.results?.length || 0} results`;
+    case "read_webpage": return r.title || r.url;
+    case "write_file": return `${r.overwritten ? "replaced" : "saved"} ${r.path} (${r.bytes} bytes)`;
+    case "read_file": return `read ${r.path} (${r.size} bytes)`;
+    case "list_files": return `${r.entries?.length || 0} items in ${r.folder}`;
+    case "delete_file": return `deleted ${r.deleted}`;
+    case "make_picture": return "picture made";
+    case "delegate": return `${r.agent} finished`;
+    default: return "done";
+  }
+}
+
+const approvals = new Map();
+function askApproval(ctx, a, s) {
+  return new Promise((resolve, reject) => {
+    s.key = a.id + ":" + a.steps.indexOf(s);
+    const onAbort = () => { approvals.delete(s.key); reject(abortErr()); };
+    approvals.set(s.key, (v) => {
+      approvals.delete(s.key);
+      ctx.signal.removeEventListener("abort", onAbort);
+      if (v === "all") ctx.allowAll = true;
+      resolve(v !== "deny");
+    });
+    ctx.signal.addEventListener("abort", onAbort, { once: true });
+    swarmRedraw(ctx);
+    toast(`${a.icon} ${a.name} is waiting for your OK`);
+  });
+}
+
+let swarmPending = false;
+function swarmRedraw(ctx) {
+  if (swarmPending) return;
+  swarmPending = true;
+  requestAnimationFrame(() => { swarmPending = false; if (current === ctx.chat) renderMessages(); else scheduleInspector(); });
+}
+
+// One agent: think → (maybe) use a tool → read the result → repeat, until it gives a <final> result.
+async function runAgent(ctx, spec, task, { tools = [], extraTools = {}, extraDesc = {}, extraSystem = "", maxSteps = settings.agentSteps, label } = {}) {
+  const allowed = [...tools, ...Object.keys(extraTools)];
+  const a = { id: "a" + Math.random().toString(36).slice(2, 8), icon: spec.icon || "🤖", name: label || spec.name, task, status: "thinking", steps: [], final: "", thinking: "", live: "", liveThinking: "", tools: allowed, messages: [] };
+  ctx.reply.agents.push(a);
+  a.messages.push({ role: "system", content: agentSystem(spec, allowed, maxSteps, extraDesc, extraSystem) }, { role: "user", content: task });
+  ev(ctx.reply, `${a.icon} ${a.name} started`, task.split("\n").find((l) => l.trim())?.slice(0, 160) || "");
+  swarmRedraw(ctx);
+  const expectThink = !!thinkers[ctx.model];
+  for (let step = 0; ; step++) {
+    if (ctx.signal.aborted) throw abortErr();
+    const last = step >= maxSteps || !allowed.length;
+    if (step >= maxSteps && step > 0) a.messages.push({ role: "user", content: "You've used all your tool uses. Give your <final> result now." });
+    a.status = "thinking"; swarmRedraw(ctx);
+    const out = await streamChat(ctx.model, a.messages, { temperature: 0.5, num_ctx: settings.numCtx, stop: ["</tool>", "<tool_result"] }, (o) => {
+      const st = splitThinking({ ...o, expectThink, streaming: true });
+      a.liveThinking = st.thinking; a.live = st.content; swarmRedraw(ctx);
+    }, ctx.signal);
+    learnThinker(ctx.model, out);
+    ctx.tokens += out.stats?.eval_count || 0;
+    const st = splitThinking(out);
+    if (st.thinking) a.thinking += (a.thinking ? "\n\n— next step —\n\n" : "") + st.thinking;
+    a.live = ""; a.liveThinking = "";
+    const parsed = last ? { final: extractFinal(st.content) } : parseAgentReply(st.content, allowed);
+    if (parsed.final != null) {
+      a.final = parsed.final || "(no result)";
+      a.messages.push({ role: "assistant", content: st.content });
+      a.status = "done";
+      ev(ctx.reply, `${a.icon} ${a.name} finished`, `${a.steps.length} tool use${a.steps.length === 1 ? "" : "s"}`);
+      swarmRedraw(ctx);
+      return a.final;
+    }
+    a.messages.push({ role: "assistant", content: /<\/tool>/.test(st.content) ? st.content : st.content + "</tool>" });
+    const s = { tool: parsed.tool, args: parsed.args, status: "running", sig: parsed.tool + JSON.stringify(parsed.args).replace(/#[^"]*/g, "") };
+    a.steps.push(s);
+    let result = null;
+    const sig = parsed.tool + JSON.stringify(parsed.args).replace(/#[^"]*/g, "");
+    if (parsed.tool === "invalid") result = { error: 'Your tool call wasn\'t valid JSON. Use exactly: <tool>{"name": "tool_name", "args": {...}}</tool>' };
+    else if (a.steps.slice(0, -1).some((x) => x.sig === sig)) {
+      const prev = a.steps.slice(0, -1).find((x) => x.sig === sig);
+      result = { error: prev.status === "error"
+        ? "This exact call already failed. Running it again will fail the same way: change it first (fix the error shown in its result), or give your <final> result and say it didn't work."
+        : "You already made this exact call, and its result is above. Use that result, try something different, or give your <final> result." };
+    }
+    else if (!allowed.includes(parsed.tool)) {
+      const repeat = a.steps.filter((x) => x.tool === parsed.tool).length > 1;
+      result = { error: `You don't have a tool called "${parsed.tool}". Your tools: ${allowed.join(", ") || "none"}.` +
+        (repeat ? " You've tried this before. Stop trying it: do your part with your own tools, or give your <final> result now and say what's left for a teammate." : "") };
+    }
+    else {
+      ev(ctx.reply, `${a.icon} ${a.name} → ${parsed.tool}`, argSummary(parsed.tool, parsed.args));
+      if (!extraTools[parsed.tool] && !ctx.allowAll && (await needsApproval(parsed.tool, parsed.args))) {
+        a.status = "waiting for you"; s.status = "approval";
+        ev(ctx.reply, `Waiting for your OK: ${parsed.tool}`, argSummary(parsed.tool, parsed.args), true);
+        const ok = await askApproval(ctx, a, s);
+        if (!ok) { s.status = "denied"; result = { error: "The user declined this action, so it did NOT happen and you have NO result from it. Never make up what it would have produced. Find another way, or finish and say clearly that this part wasn't done." }; ev(ctx.reply, "You declined " + parsed.tool); }
+        else ev(ctx.reply, "You allowed " + parsed.tool);
+      }
+      if (!result) {
+        s.status = "running";
+        a.status = extraTools[parsed.tool] ? "delegating" : TOOL_INFO[parsed.tool].verb;
+        swarmRedraw(ctx);
+        try { result = extraTools[parsed.tool] ? await extraTools[parsed.tool](parsed.args) : await callTool(parsed.tool, parsed.args, ctx.signal); }
+        catch (e) { if (e.name === "AbortError") throw e; result = { error: e.message }; }
+      }
+    }
+    s.result = result;
+    const codeFailed = parsed.tool === "run_code" && result && !result.error && (result.exit_code !== 0 || result.timed_out);
+    s.status = s.status === "denied" ? "denied" : result?.error || codeFailed ? "error" : "done";
+    if (codeFailed) result = { ...result, note: "THE CODE FAILED, so you have NO result from it. Read stderr, fix the code, and run it again. Never report numbers or charts from code that failed." };
+    else if (parsed.tool === "run_code" && result && !result.error && !String(result.stdout || "").trim())
+      result = { ...result, note: "The code printed nothing, so you don't know its results. If you need a number, add print() and run it again. Never guess a value the code didn't print." };
+    if (parsed.tool === "make_picture" && result?.picture) ctx.reply.pictures.push(result.picture);
+    if (parsed.tool === "write_file" && result?.path && !ctx.reply.files.includes(result.path)) ctx.reply.files.push(result.path);
+    for (const f of [...(result?.files_written || []), ...(parsed.tool === "screenshot_page" && result?.path ? [result.path] : [])])
+      if (!ctx.reply.files.includes(f)) ctx.reply.files.push(f);
+    if (parsed.tool === "delete_file" && result?.deleted) ctx.reply.files = ctx.reply.files.filter((f) => f !== result.deleted);
+    const text = JSON.stringify(result, null, 1);
+    a.messages.push({ role: "user", content: `<tool_result name="${parsed.tool}">\n${text.length > 7000 ? text.slice(0, 7000) + "\n[...cut off]" : text}\n</tool_result>\nContinue: use another tool, or give your <final> result.` });
+    swarmRedraw(ctx);
+  }
+}
+
+const rosterMenu = () => roster.map((r) => `- ${r.name}: ${r.role.split(/(?<=[.!?])\s/)[0]} Tools: ${toolsFor(r).join(", ") || "none"}`).join("\n");
+const findAgent = (name) => roster.find((r) => r.name.toLowerCase() === String(name || "").trim().toLowerCase());
+
+async function swarmTeam(ctx, request) {
+  const planText = await runAgent(ctx, { icon: "🗺️", name: "Planner", role: "You plan how a team of AI specialists will handle the user's request." },
+    `USER REQUEST:\n${request}\n\nSPECIALISTS:\n${rosterMenu()}\n\nSplit the work into 1 to 4 steps in order, each done by one specialist whose tools fit that step. Use as few steps as possible: most requests need 1 or 2, and a single specialist can do several related things (for example, the Coder can write, run and save code in one step). Don't add a step just to write up the result: a reviewer does that automatically. Charts and graphs are made with code (matplotlib) by the Analyst or Coder in the same step as the calculation; the Artist only makes artistic pictures. Make each task specific and self-contained.\nInside <final>, put ONLY this JSON:\n{"steps": [{"agent": "Specialist name", "task": "what to do"}]}`,
+    { maxSteps: 0 });
+  let steps = (lenientJSON(planText)?.steps || []).filter((s) => s?.task).slice(0, 4);
+  if (!steps.length) { steps = [{ agent: "Generalist", task: request }]; ev(ctx.reply, "Couldn't read the plan", "Giving the whole job to the Generalist", true); }
+  ctx.reply.plan = steps.map((s) => ({ agent: (findAgent(s.agent) || findAgent("Generalist") || roster[0]).name, task: String(s.task) }));
+  ev(ctx.reply, "Plan ready", ctx.reply.plan.map((s) => s.agent).join(" → "));
+  const results = [];
+  for (const [i, s] of ctx.reply.plan.entries()) {
+    const spec = findAgent(s.agent);
+    const prior = results.map((r) => `### ${r.name}\n${r.final}`).join("\n\n");
+    const final = await runAgent(ctx, spec, `The user asked:\n${request}\n\nYour part (step ${i + 1} of ${ctx.reply.plan.length}): ${s.task}` + (prior ? `\n\nYour teammates' results so far:\n${prior}` : ""), { tools: toolsFor(spec) });
+    results.push({ name: spec.name, final });
+  }
+  // Real output from code that ran successfully, so the reviewer can check numbers against it.
+  const evidence = ctx.reply.agents.flatMap((a) => a.steps.filter((x) => x.tool === "run_code" && x.status === "done" && x.result?.stdout?.trim())
+    .map((x) => `${a.name}'s code printed:\n${x.result.stdout.trim().slice(0, 1500)}`)).join("\n\n");
+  return runAgent(ctx, { icon: "✅", name: "Reviewer", role: "You are the team's reviewer and editor. You check the team's work for mistakes, gaps and contradictions, fix what you can, and write the final answer for the user." },
+    `The user asked:\n${request}\n\nThe team's results:\n${results.map((r) => `### ${r.name}\n${r.final}`).join("\n\n")}\n\n` +
+    `EVIDENCE (actual output from code that ran):\n${evidence || "(no code printed anything)"}\n\n` +
+    `Check the work against the request and fix any errors or gaps. Any number that came from a calculation must match the EVIDENCE exactly; if it isn't there, say the number wasn't verified instead of stating it. If a teammate couldn't do something (a tool failed or the user declined it), say so honestly: never fill the gap with made-up results, outputs, dates or numbers. Then write the complete final answer for the user inside <final>. Mention any files the team saved in the workspace folder and any pictures. Don't describe the team or this review unless it helps the user.`,
+    { tools: ["read_file", "list_files"].filter(toolEnabled), maxSteps: 3 });
+}
+
+async function swarmLead(ctx, request) {
+  let hired = 0;
+  const delegate = async (args) => {
+    if (++hired > 6) return { error: "You've already used 6 helpers. Finish with what you have." };
+    const base = findAgent(args.agent);
+    const spec = base || { icon: "🤖", name: String(args.agent || "Helper").slice(0, 32), role: String(args.role || "You are a capable helper.").slice(0, 800) };
+    const tools = base ? toolsFor(base) : (Array.isArray(args.tools) ? args.tools : []).filter((t) => TOOL_INFO[t] && toolEnabled(t));
+    if (!base) ev(ctx.reply, `👑 Lead created a new helper: ${spec.name}`, `tools: ${tools.join(", ") || "none"}`);
+    const final = await runAgent(ctx, spec, String(args.task || "Help with the user's request."), { tools });
+    return { agent: spec.name, result: final.length > 6000 ? final.slice(0, 6000) + "\n[...cut off]" : final };
+  };
+  const desc = { delegate: 'Hand a task to a helper agent and get back its result. Use a roster name, or invent a new helper by giving a new name plus "role" and "tools". args: {"agent": "name", "task": "complete, self-contained instructions", "role": "new helpers only", "tools": ["new helpers only: tool names"]}' };
+  return runAgent(ctx, { icon: "👑", name: "Lead", role: "You lead a team of AI agents. Break the user's request into pieces and hand them to helpers with the delegate tool, one at a time, using each result to decide the next step. Do simple things yourself. When you have what you need, write the final answer for the user." },
+    request, { tools: ["list_files", "read_file"].filter(toolEnabled), extraTools: { delegate }, extraDesc: desc, maxSteps: 10,
+      extraSystem: `ROSTER (helpers you can use):\n${rosterMenu()}\n\nTools you can give new helpers: ${Object.keys(TOOL_INFO).filter(toolEnabled).join(", ")}.` });
+}
+
+async function swarmDebate(ctx, request) {
+  let team = settings.debaters.map((id) => roster.find((r) => r.id === id)).filter(Boolean).slice(0, 4);
+  if (team.length < 2) team = roster.slice(0, 3);
+  let answers = [];
+  for (const d of team) {
+    answers.push({ name: d.name, text: await runAgent(ctx, d, `The user's question:\n${request}\n\nGive your own best answer. Be concrete and explain your reasoning, because other agents will answer separately and critique your answer.`,
+      { tools: toolsFor(d), maxSteps: Math.min(settings.agentSteps, 4), label: `${d.name} · round 1` }) });
+  }
+  for (let round = 2; round <= settings.debateRounds; round++) {
+    const prev = answers;
+    answers = [];
+    for (const d of team) {
+      const others = prev.filter((p) => p.name !== d.name).map((p) => `### ${p.name}\n${p.text}`).join("\n\n");
+      answers.push({ name: d.name, text: await runAgent(ctx, d, `The user's question:\n${request}\n\nYour previous answer:\n${prev.find((p) => p.name === d.name)?.text}\n\nThe other agents answered:\n${others}\n\nCritique their answers: what's wrong or missing, and what's better than yours. Then give your improved answer. Change your mind if they convinced you.`,
+        { maxSteps: 0, label: `${d.name} · round ${round}` }) });
+    }
+  }
+  return runAgent(ctx, { icon: "⚖️", name: "Judge", role: "You weigh several agents' answers and write the single best answer." },
+    `The user's question:\n${request}\n\nThe debaters' final answers:\n${answers.map((p) => `### ${p.name}\n${p.text}`).join("\n\n")}\n\nInside <final>, write the best possible answer for the user, combining the strongest points and fixing mistakes. Don't add facts or results that none of them actually established. If the debaters disagreed on something important, end with a short "Where they disagreed" note.`,
+    { maxSteps: 0 });
+}
+
+// The swarm sees recent conversation for context, plus any attached files.
+function swarmRequest(chat) {
+  const msgs = chat.messages.slice(0, -1);
+  const last = msgs.at(-1);
+  const history = msgs.slice(0, -1).slice(-6).map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${(m.role === "assistant" ? splitThinking(m).content : m.content).slice(0, 1500)}`).join("\n\n");
+  let req = last.content;
+  for (const f of (last.attachments || []).filter((a) => a.kind === "text")) req += `\n\n--- Attached file: ${f.name} ---\n${f.text}\n--- End of ${f.name} ---`;
+  for (const a of (last.attachments || []).filter((a) => a.kind === "image"))
+    req += a.ocrText ? `\n\n[Text found in the attached picture "${a.name}" (OCR):\n${a.ocrText}]` : `\n\n[A picture "${a.name}" was attached, but agents can't see images.]`;
+  return history ? `Earlier in this conversation:\n${history}\n\nCurrent request:\n${req}` : req;
+}
+
+async function runSwarm(chat) {
+  const mode = chat.messages.at(-1).swarmMode;
+  const model = $("model").value;
+  if (!model) return toast("No model available. Is Ollama running?");
+  const reply = { role: "assistant", kind: "swarm", mode, content: "", final: "", agents: [], pictures: [], files: [], plan: null, trace: { start: Date.now(), events: [] } };
+  chat.messages.push(reply);
+  selectedIdx = null; editingIdx = null;
+  controller = new AbortController();
+  setBusy(true);
+  reply.streaming = true;
+  reply.opts = { model, temperature: 0.5, preset: MODE_LABEL[mode] + " swarm", numCtx: settings.numCtx };
+  saveAll(); render();
+  const ctx = { chat, reply, model, signal: controller.signal, allowAll: settings.approvals === "never", tokens: 0 };
+  ev(reply, `${MODE_LABEL[mode]} swarm started`, `${model} · approvals: ${settings.approvals === "risky" ? "risky actions" : settings.approvals}`);
+  try {
+    const request = swarmRequest(chat);
+    const final = await (mode === "lead" ? swarmLead : mode === "debate" ? swarmDebate : swarmTeam)(ctx, request);
+    reply.final = final;
+    reply.content = final;
+    ev(reply, "Done", `${reply.agents.length} agents · ${reply.agents.reduce((n, a) => n + a.steps.length, 0)} tool uses · ${ctx.tokens} tokens · ${fmtMs(Date.now() - reply.trace.start)}`);
+    if (settings.autoRead) speak(final);
+  } catch (err) {
+    if (err.name === "AbortError") { reply.error = "Stopped."; ev(reply, "Stopped by you"); }
+    else { reply.error = err.message; ev(reply, "Error", err.message, true); }
+    reply.content = reply.final || reply.agents.filter((a) => a.final).map((a) => `${a.name}: ${a.final}`).join("\n\n") || "[The swarm stopped before finishing]";
+  } finally {
+    reply.streaming = false;
+    reply.agents.forEach((a) => { if (a.status !== "done") a.status = reply.error === "Stopped." ? "stopped" : "unfinished"; a.live = ""; a.liveThinking = ""; });
+    controller = null;
+    setBusy(false);
+    saveAll(true);
+    if (current === chat) renderMessages();
+  }
+  if (settings.autoTitle && !chat.autoTitled && !reply.error) autoTitle(chat);
+}
+
+// ----- swarm rendering -----
+const openSteps = new Set();
+const isImg = (f) => /\.(png|jpe?g|gif|webp)$/i.test(f);
+const wsUrl = (f) => "/workspace/" + String(f).split("/").map(encodeURIComponent).join("/");
+function stepHTML(a, s, k) {
+  const key = `${a.id}:${k}`;
+  const info = TOOL_INFO[s.tool];
+  let h = `<div class="step ${s.status}"><span>${info?.icon || (s.tool === "delegate" ? "🤝" : "🔧")} <b>${esc(s.tool)}</b></span> <span class="note">${esc(argSummary(s.tool, s.args))}</span>`;
+  if (s.status === "approval") {
+    const a2 = s.args || {};
+    const detail = s.tool === "run_code" ? a2.code : s.tool === "write_file" ? `${a2.path}\n\n${String(a2.content || "").slice(0, 3000)}` : s.tool === "web_search" ? `Search for: ${a2.query}\n\n(Sent to DuckDuckGo${settings.wikipedia ? " and Wikipedia" : ""}${settings.braveKey ? " and Brave" : ""})` : s.tool === "read_webpage" ? a2.url : JSON.stringify(a2, null, 1);
+    const ask = { run_code: settings.codeSandbox && caps2.sandbox ? `wants to run this ${a2.language || "python"} code in the sandbox (it can't touch your PC or the internet):` : `wants to run this ${a2.language || "python"} code on your PC (inside the workspace folder):`, delete_file: `wants to delete <b>${esc(a2.path || "")}</b> from the workspace.`, write_file: `wants to replace the existing file <b>${esc(a2.path || "")}</b>:`, web_search: "wants to search the web:", read_webpage: "wants to open this web page:" }[s.tool] || `wants to use ${esc(s.tool)}:`;
+    h += `<div class="appr"><div>${esc(a.icon + " " + a.name)} ${ask}</div>${detail ? `<pre>${esc(detail)}</pre>` : ""}
+      <div class="row"><button class="primary" type="button" data-act="approve" data-key="${s.key}" data-v="allow">Allow</button>
+      <button class="ghost" type="button" data-act="approve" data-key="${s.key}" data-v="all">Allow everything for this task</button>
+      <button class="ghost danger" type="button" data-act="approve" data-key="${s.key}" data-v="deny">Deny</button></div></div>`;
+  } else if (s.result) {
+    h += `<details class="sres" data-skey="${key}"${openSteps.has(key) ? " open" : ""}><summary>${esc(resultSummary(s))}</summary><pre>${esc(JSON.stringify(s.result, null, 1).slice(0, 5000))}</pre></details>`;
+    if (s.result.picture) h += `<a href="/images/${esc(s.result.picture)}" target="_blank"><img class="thumb" style="width:120px;height:120px;margin-top:5px" src="/images/${esc(s.result.picture)}"></a>`;
+    for (const f of [...(s.result.files_written || []), ...(s.tool === "screenshot_page" && s.result.path ? [s.result.path] : [])].filter(isImg))
+      h += `<a href="${wsUrl(f)}" target="_blank"><img class="thumb" style="width:160px;height:auto;margin:5px 5px 0 0" src="${wsUrl(f)}"></a>`;
+  } else if (s.status === "running") {
+    h += ` <span class="note">…</span>`;
+  }
+  return h + `</div>`;
+}
+function agentCardHTML(a) {
+  const open = a.uiOpen ?? (a.status !== "done" && a.status !== "stopped" && a.status !== "unfinished");
+  const cls = a.status === "done" ? "done" : a.status === "waiting for you" ? "wait" : /stopped|unfinished/.test(a.status) ? "err" : "work";
+  return `<details class="agent" data-aid="${a.id}"${open ? " open" : ""}><summary><span>${esc(a.icon)}</span><b>${esc(a.name)}</b><span class="astat ${cls}">${esc(a.status)}</span></summary>
+    <div class="abody"><div class="atask" title="${esc(a.task)}">${esc(a.task.split("\n").filter((l) => l.trim()).slice(-3).join("\n").slice(0, 300))}</div>
+    ${a.steps.map((s, k) => stepHTML(a, s, k)).join("")}
+    ${a.live ? `<div class="alive">${esc(a.live.slice(-500))}<span class="caret">▍</span></div>` : a.liveThinking ? `<div class="alive">💭 ${esc(a.liveThinking.slice(-300))}<span class="caret">▍</span></div>` : ""}
+    ${a.final ? `<div class="afinal">${md(a.final)}</div>` : ""}</div></details>`;
+}
+function swarmMessageHTML(m, i, sel, busy) {
+  let h = `<div class="swarm"><div class="swhead"><b>${MODE_LABEL[m.mode]} swarm</b><span class="note">${m.agents.length} agent${m.agents.length === 1 ? "" : "s"} · ${m.agents.reduce((n, a) => n + a.steps.length, 0)} tool uses</span><span class="live ${m.streaming ? "on" : ""}"></span></div>`;
+  if (m.plan) h += `<div class="swplan">${m.plan.map((p, k) => `${k + 1}. <b>${esc(p.agent)}</b>: ${esc(p.task)}`).join("<br>")}</div>`;
+  h += m.agents.map(agentCardHTML).join("");
+  h += `</div>`;
+  if (m.final) h += `<div class="swfinal">${md(m.final)}</div>`;
+  else if (m.error) h += `<p class="error">${esc(m.error)}</p>`;
+  // Facts from the app itself, not the model: flag answers that may rest on actions that never happened.
+  const steps = m.agents.flatMap((a) => a.steps);
+  const declined = steps.filter((s) => s.status === "denied"), failed = steps.filter((s) => s.status === "error" && TOOL_INFO[s.tool]);
+  if (!m.streaming && (declined.length || failed.length))
+    h += `<div class="gate" style="color:var(--warn);border-color:color-mix(in srgb,var(--warn) 50%,transparent)">⚠️ ${[
+      declined.length ? `You declined ${declined.length} action${declined.length > 1 ? "s" : ""} (${[...new Set(declined.map((s) => s.tool))].join(", ")})` : "",
+      failed.length ? `${failed.length} tool use${failed.length > 1 ? "s" : ""} failed` : ""].filter(Boolean).join(" and ")
+    }, so check that this answer doesn't rely on results that weren't actually produced.</div>`;
+  if (m.pictures?.length) h += `<div class="swpics">${m.pictures.map((p) => `<a href="/images/${esc(p)}" target="_blank"><img src="/images/${esc(p)}"></a>`).join("")}</div>`;
+  const imgs = (m.files || []).filter(isImg);
+  if (imgs.length) h += `<div class="swpics">${imgs.map((f) => `<a href="${wsUrl(f)}" target="_blank" title="${esc(f)}"><img src="${wsUrl(f)}"></a>`).join("")}</div>`;
+  if (m.files?.length) h += `<div class="swfiles">📁 Saved in the workspace: ${m.files.map((f) => `<a href="${wsUrl(f)}" target="_blank">${esc(f)}</a>`).join("")}</div>`;
+  const acts = m.streaming ? "" : `<div class="acts">
+    <button type="button" data-act="regen" data-idx="${i}" ${busy ? "disabled" : ""} title="Run the swarm again">🔁 Run again</button>
+    <button type="button" data-act="copy" data-idx="${i}">📋 Copy answer</button>
+    <button type="button" data-act="speak" data-idx="${i}">🔊 Read aloud</button></div>`;
+  return `<div class="msg assistant wide${i === sel ? " sel" : ""}" data-idx="${i}"><div class="bubble" title="${settings.inspector ? "Click to inspect this reply" : ""}">${h}</div>${acts}</div>`;
+}
+
+// ----- Agents settings tab -----
+let editingRosterId = roster[0]?.id;
+function renderAgentsTab() {
+  $("approvals").value = settings.approvals;
+  $("codeSandbox").value = settings.codeSandbox ? "1" : "0";
+  $("codeSandbox").options[0].disabled = !caps2.sandbox;
+  $("sandboxNote").textContent = caps2.sandbox ? "The sandbox includes numpy, pandas and matplotlib, and needs no approval." : "The sandbox isn't installed, so code runs on your PC.";
+  $("searchEngine").value = settings.searchEngine;
+  $("searchEngine").options[0].disabled = !caps2.search;
+  renderMcp();
+  $("agentSteps").value = settings.agentSteps; $("agentStepsVal").textContent = settings.agentSteps;
+  $("debateRounds").value = settings.debateRounds;
+  $("useWikipedia").checked = settings.wikipedia;
+  $("braveKey").value = settings.braveKey || "";
+  $("toolGroups").innerHTML = Object.entries(GROUP_LABEL).map(([g, label]) =>
+    `<label class="check"><input type="checkbox" data-group="${g}" ${settings.toolGroups[g] !== false ? "checked" : ""}> ${label}${g === "pictures" && !imageEngine.ready ? " <span class='note'>(image engine not installed)</span>" : ""}</label>`).join("");
+  $("debaterBoxes").innerHTML = roster.map((r) => `<label class="check"><input type="checkbox" data-debater="${r.id}" ${settings.debaters.includes(r.id) ? "checked" : ""}> ${esc(r.icon + " " + r.name)}</label>`).join("");
+  renderRosterEditor();
+  renderWorkspace();
+}
+function renderRosterEditor() {
+  if (!roster.some((r) => r.id === editingRosterId)) editingRosterId = roster[0]?.id;
+  const r = roster.find((x) => x.id === editingRosterId);
+  $("rEditSel").innerHTML = roster.map((x) => `<option value="${x.id}">${esc(x.icon + " " + x.name)}</option>`).join("");
+  if (!r) return;
+  $("rEditSel").value = r.id;
+  $("rIcon").value = r.icon; $("rName").value = r.name; $("rRole").value = r.role;
+  $("rTools").innerHTML = Object.entries(TOOL_INFO).filter(([t]) => !t.startsWith("mcp__")).map(([t, info]) => `<label class="check"><input type="checkbox" data-rtool="${t}" ${r.tools.includes(t) ? "checked" : ""}> ${info.icon} ${t}</label>`).join("")
+    + `<label class="check"><input type="checkbox" data-rtool="mcp:*" ${r.tools.includes("mcp:*") ? "checked" : ""}> 🔌 all MCP tools</label>`
+    + Object.entries(TOOL_INFO).filter(([t]) => t.startsWith("mcp__")).map(([t, info]) => `<label class="check"><input type="checkbox" data-rtool="${t}" ${r.tools.includes(t) ? "checked" : ""}> 🔌 ${esc(info.mcpServer)}: ${esc(info.mcpTool)}</label>`).join("");
+  $("rDel").disabled = roster.length <= 1;
+}
+async function renderWorkspace() {
+  const r = await callTool("list_files", { path: "." });
+  const files = (r.entries || []).filter((e) => !e.name.startsWith("."));
+  $("wsList").innerHTML = files.length ? files.map((e) => `<div class="wsfile">${e.name.endsWith("/") ? `<span style="flex:1">📁 ${esc(e.name)}</span>` : `<a href="/workspace/${encodeURIComponent(e.name)}" target="_blank">📄 ${esc(e.name)}</a>`}<span class="note">${e.size != null ? fmtBytes(e.size).replace(/^0 MB$/, e.size + " bytes") : ""}</span></div>`).join("") : `<p class="note">Empty for now.</p>`;
+}
+$("approvals").onchange = () => { settings.approvals = $("approvals").value; saveAll(); };
+$("codeSandbox").onchange = () => { settings.codeSandbox = $("codeSandbox").value === "1"; saveAll(); };
+$("searchEngine").onchange = () => { settings.searchEngine = $("searchEngine").value; saveAll(); };
+
+// ----- MCP servers -----
+function renderMcp() {
+  const servers = mcpState.config?.servers || {};
+  $("mcpList").innerHTML = Object.entries(servers).map(([name, s]) => {
+    const st = mcpState.status?.[name.replace(/[^\w-]/g, "_")] || {};
+    const label = s.label || mcpState.presets?.[name]?.label || `${s.command} ${(s.args || []).join(" ")}`.slice(0, 80);
+    const status = !s.enabled ? "off" : st.connecting ? "connecting… (first start downloads it)" : st.connected ? `connected · ${st.tools.length} tools` : st.error ? "⚠️ " + st.error : "not connected";
+    return `<div class="mrow"><div class="mtop"><label class="check" style="margin:0"><input type="checkbox" data-mcp-on="${esc(name)}" ${s.enabled ? "checked" : ""}> <b>${esc(name)}</b></label>
+      <span class="tag ${st.connected ? "on" : ""}">${esc(status)}</span></div>
+      <div class="mmeta">${esc(label)}</div>
+      <label class="check" style="font-size:12.5px"><input type="checkbox" data-mcp-trust="${esc(name)}" ${s.trusted ? "checked" : ""}> Trusted (its tools run without asking)</label>
+      ${st.tools?.length ? `<details><summary class="note">Tools</summary><div class="note" style="font-size:12px">${st.tools.map((t) => `<b>${esc(t.name)}</b>: ${esc(t.description.split("\n")[0].slice(0, 140))}`).join("<br>")}</div></details>` : ""}</div>`;
+  }).join("") || `<p class="note">No servers configured.</p>`;
+  $("mcpJson").value = JSON.stringify(mcpState.config || { servers: {} }, null, 2);
+}
+async function saveMcp(config) {
+  $("mcpList").insertAdjacentHTML("afterbegin", `<p class="note">Connecting… a server's first start can take a minute while it downloads.</p>`);
+  const r = await fetch("/mcp", { method: "PUT", body: JSON.stringify(config) });
+  const d = await r.json();
+  if (!r.ok) toast("Couldn't save the MCP servers: " + d.error);
+  await refreshMcp(); renderMcp(); renderRosterEditor();
+}
+$("mcpList").onchange = (e) => {
+  const cfg = structuredClone(mcpState.config || { servers: {} });
+  const on = e.target.dataset.mcpOn, trust = e.target.dataset.mcpTrust;
+  if (on) cfg.servers[on].enabled = e.target.checked;
+  else if (trust) cfg.servers[trust].trusted = e.target.checked;
+  else return;
+  saveMcp(cfg);
+};
+$("mcpSaveJson").onclick = () => {
+  let cfg;
+  try { cfg = JSON.parse($("mcpJson").value); } catch { return toast("That isn't valid JSON."); }
+  saveMcp(cfg);
+};
+$("mcpRefresh").onclick = async () => { await refreshMcp(); renderMcp(); };
+
+// ----- document library -----
+async function renderLibrary() {
+  const d = await (await fetch("/library")).json();
+  $("libList").innerHTML = d.docs?.length ? d.docs.map((x) => `<div class="wsfile"><span style="flex:1">📄 ${esc(x.name)}</span><span class="note">${x.chunks} passages · ${fmtK(x.chars)} characters</span><button class="ghost sm danger" data-libdel="${x.id}">Remove</button></div>`).join("")
+    : `<p class="note">Nothing here yet.</p>`;
+}
+async function fileToText(f) {
+  if (f.type === "application/pdf" || /\.pdf$/i.test(f.name)) {
+    const r = await fetch("/extract-pdf", { method: "POST", body: f });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error);
+    if (!d.text.trim()) throw new Error("no text found");
+    return d.text;
+  }
+  if (f.type.startsWith("text/") || TEXT_EXT.test(f.name) || f.type === "application/json") return f.text();
+  throw new Error("only text, code and PDF files can be added");
+}
+$("libAdd").onclick = () => $("libFiles").click();
+$("libFiles").onchange = async () => {
+  const files = [...$("libFiles").files];
+  $("libFiles").value = "";
+  let done = 0;
+  for (const f of files) {
+    $("libStatus").textContent = `Adding ${f.name} (${done + 1} of ${files.length})…`;
+    try {
+      const text = await fileToText(f);
+      const r = await fetch("/library/add", { method: "POST", body: JSON.stringify({ name: f.name, text }) });
+      const d = await r.json();
+      if (!r.ok || d.error) throw new Error(d.error);
+      done++;
+    } catch (e) { toast(`Couldn't add ${f.name}: ${e.message}`); }
+  }
+  $("libStatus").textContent = files.length ? `Added ${done} of ${files.length}.` : "";
+  renderLibrary();
+};
+$("libList").onclick = async (e) => {
+  const id = e.target.dataset.libdel;
+  if (!id || !confirm("Remove this document from the library? (The original file isn't touched.)")) return;
+  await fetch("/library/" + id, { method: "DELETE" });
+  renderLibrary();
+};
+$("useLibrary").onchange = () => { settings.useLibrary = $("useLibrary").checked; saveAll(); };
+async function libraryContext(query) {
+  try {
+    const r = await (await fetch("/library/search", { method: "POST", body: JSON.stringify({ query, k: 4 }) })).json();
+    return (r.results || []).filter((x) => x.relevance > 0.45);
+  } catch { return []; }
+}
+$("agentSteps").oninput = () => { settings.agentSteps = +$("agentSteps").value; $("agentStepsVal").textContent = settings.agentSteps; saveAll(); };
+$("debateRounds").onchange = () => { settings.debateRounds = +$("debateRounds").value; saveAll(); };
+$("useWikipedia").onchange = () => { settings.wikipedia = $("useWikipedia").checked; saveAll(); };
+$("braveKey").oninput = () => { settings.braveKey = $("braveKey").value.trim(); saveAll(); };
+$("toolGroups").onchange = (e) => { const g = e.target.dataset.group; if (g) { settings.toolGroups[g] = e.target.checked; saveAll(); } };
+$("debaterBoxes").onchange = (e) => {
+  const id = e.target.dataset.debater;
+  if (!id) return;
+  settings.debaters = e.target.checked ? [...new Set([...settings.debaters, id])] : settings.debaters.filter((x) => x !== id);
+  if (settings.debaters.length > 4) { settings.debaters = settings.debaters.filter((x) => x !== id); e.target.checked = false; toast("Up to 4 debaters"); }
+  saveAll();
+};
+const editRoster = (fn) => { const r = roster.find((x) => x.id === editingRosterId); if (r) { fn(r); saveAll(); } };
+$("rEditSel").onchange = () => { editingRosterId = $("rEditSel").value; renderRosterEditor(); };
+$("rIcon").oninput = () => { editRoster((r) => r.icon = $("rIcon").value || "🤖"); $("rEditSel").selectedOptions[0].textContent = $("rIcon").value + " " + $("rName").value; };
+$("rName").oninput = () => { editRoster((r) => r.name = $("rName").value || "Agent"); $("rEditSel").selectedOptions[0].textContent = $("rIcon").value + " " + $("rName").value; };
+$("rRole").oninput = () => editRoster((r) => r.role = $("rRole").value);
+$("rTools").onchange = (e) => { const t = e.target.dataset.rtool; if (t) editRoster((r) => r.tools = e.target.checked ? [...new Set([...r.tools, t])] : r.tools.filter((x) => x !== t)); };
+$("rNew").onclick = () => {
+  const r = { id: "r" + Date.now(), icon: "🤖", name: "New agent", role: "Describe who this agent is and how it works.", tools: [] };
+  roster.push(r); editingRosterId = r.id; saveAll(); renderAgentsTab(); $("rName").focus(); $("rName").select();
+};
+$("rDel").onclick = () => {
+  const r = roster.find((x) => x.id === editingRosterId);
+  if (!r || roster.length <= 1 || !confirm(`Delete the agent "${r.name}"?`)) return;
+  roster = roster.filter((x) => x !== r);
+  settings.debaters = settings.debaters.filter((x) => x !== r.id);
+  saveAll(); renderAgentsTab();
+};
+$("rReset").onclick = () => {
+  if (!confirm("Replace the roster with the built-in agents? Your custom agents and edits will be lost.")) return;
+  roster = structuredClone(DEFAULT_ROSTER); saveAll(); renderAgentsTab();
+};
+$("wsRefresh").onclick = renderWorkspace;
+$("mode").onchange = () => {
+  settings.mode = $("mode").value; saveAll();
+  $("input").placeholder = settings.mode === "chat" ? "Message…" : `Give the ${MODE_LABEL[settings.mode]} swarm a task…`;
+};
+
+// ================= attachments =================
+const TEXT_EXT = /\.(txt|md|markdown|csv|tsv|json|jsonl|xml|html?|css|scss|js|mjs|cjs|ts|tsx|jsx|py|rb|go|rs|java|kt|c|h|cc|cpp|hpp|cs|php|sh|bash|zsh|ps1|psm1|bat|cmd|sql|ya?ml|toml|ini|cfg|conf|log|lua|r|swift|dart|vue|svelte|tex|rst|srt|vtt)$/i;
+const MAX_CHARS = 60000;
+const ocrJobs = new WeakMap();   // attachment -> pending OCR request
+function clip(text, name) {
+  if (text.length <= MAX_CHARS) return text;
+  toast(`${name} is long, so only the first ${fmtK(MAX_CHARS)} characters were attached`);
+  return text.slice(0, MAX_CHARS) + `\n[...cut off: the file has ${text.length.toLocaleString()} characters]`;
+}
+async function imageToB64(file) {
+  const bmp = await createImageBitmap(file);
+  const scale = Math.min(1, 1280 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
+  const g = c.getContext("2d");
+  g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
+  g.drawImage(bmp, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", 0.85).split(",")[1];
+}
+async function addFiles(files) {
+  for (const f of files) {
+    try {
+      if (f.type.startsWith("image/")) {
+        const a = { kind: "image", name: f.name || "pasted image", data: await imageToB64(f) };
+        pending.push(a);
+        // Read any text in the picture (OCR, on this PC) so models that can't see images still get it.
+        ocrJobs.set(a, fetch("/ocr", { method: "POST", body: new Blob([Uint8Array.from(atob(a.data), (c) => c.charCodeAt(0))], { type: "image/jpeg" }) })
+          .then((r) => r.json()).then((d) => { if (d.text?.trim().length > 3) a.ocrText = d.text.trim().slice(0, MAX_CHARS); }).catch(() => {}));
+      } else if (f.type === "application/pdf" || /\.pdf$/i.test(f.name)) {
+        toast(`Reading ${f.name}…`);
+        const r = await fetch("/extract-pdf", { method: "POST", body: f });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || "couldn't read it");
+        if (!d.text.trim()) throw new Error("no text found in it, even with OCR");
+        if (d.ocr) toast(`${f.name} is a scanned PDF, so its text was read with OCR. Check it for mistakes.`);
+        pending.push({ kind: "text", name: f.name + (d.ocr ? " (read with OCR)" : ""), text: clip(d.text, f.name) });
+      } else if (f.type.startsWith("text/") || TEXT_EXT.test(f.name) || f.type === "application/json") {
+        pending.push({ kind: "text", name: f.name, text: clip(await f.text(), f.name) });
+      } else {
+        toast(`Can't attach ${f.name}: only text, code, PDF and image files work`);
+      }
+    } catch (e) {
+      toast(`Couldn't attach ${f.name}: ${e.message}`);
+    }
+  }
+  renderAttachRow();
+}
+function renderAttachRow() {
+  $("attachRow").innerHTML = pending.length ? `<div class="atts">` + pending.map((a, i) => a.kind === "image"
+    ? `<span class="chip"><img src="data:image/jpeg;base64,${a.data}" style="width:22px;height:22px;object-fit:cover;border-radius:3px"><span>${esc(a.name)}</span><button type="button" data-rm="${i}" title="Remove">✕</button></span>`
+    : `<span class="chip">📄 <span>${esc(a.name)}</span><button type="button" data-rm="${i}" title="Remove">✕</button></span>`).join("") + `</div>` : "";
+}
+$("attachRow").onclick = (e) => { if (e.target.dataset.rm) { pending.splice(+e.target.dataset.rm, 1); renderAttachRow(); } };
+$("attachBtn").onclick = () => $("fileInput").click();
+$("fileInput").onchange = () => { addFiles([...$("fileInput").files]); $("fileInput").value = ""; };
+input.addEventListener("paste", (e) => {
+  const files = [...(e.clipboardData?.files || [])];
+  if (files.length) { e.preventDefault(); addFiles(files); }
+});
+let dragDepth = 0;
+addEventListener("dragenter", (e) => { if (e.dataTransfer?.types.includes("Files")) { dragDepth++; $("dropzone").classList.add("show"); } });
+addEventListener("dragleave", () => { if (--dragDepth <= 0) { dragDepth = 0; $("dropzone").classList.remove("show"); } });
+addEventListener("dragover", (e) => e.preventDefault());
+addEventListener("drop", (e) => {
+  e.preventDefault(); dragDepth = 0; $("dropzone").classList.remove("show");
+  if (e.dataTransfer?.files.length) addFiles([...e.dataTransfer.files]);
+});
+
+// ================= voice =================
+function renderVoices() {
+  const voices = speechSynthesis.getVoices();
+  $("voiceSel").innerHTML = (caps2.voice?.tts ? `<option value="piper">🔒 Piper "Lessac" (natural voice, on this PC)</option>` : "") +
+    `<option value="">System default</option>` + voices.map((v) =>
+    `<option value="${esc(v.name)}">${esc(v.name)}${v.localService ? "" : " (online)"}</option>`).join("");
+  $("voiceSel").value = settings.voice ?? (caps2.voice?.tts ? "piper" : "");
+  if ($("voiceSel").selectedIndex < 0) $("voiceSel").selectedIndex = 0;
+}
+speechSynthesis.onvoiceschanged = () => { if ($("drawer").classList.contains("open")) renderVoices(); };
+$("voiceSel").onchange = () => { settings.voice = $("voiceSel").value; settings.voicePicked = true; saveAll(); speak("This is how I sound."); };
+let piperAudio = null;
+async function speak(text) {
+  if (speechSynthesis.speaking) { speechSynthesis.cancel(); return; }   // second click stops it
+  if (piperAudio && !piperAudio.paused) { piperAudio.pause(); piperAudio = null; return; }
+  const plain = text.replace(/```[\s\S]*?(```|$)/g, " (code block skipped) ").replace(/[*_#`>|]/g, "").replace(/\[(.*?)\]\(.*?\)/g, "$1");
+  if (!plain.trim()) return;
+  if ((settings.voice ?? "piper") === "piper" && caps2.voice?.tts) {
+    try {
+      const r = await fetch("/voice/speak", { method: "POST", body: JSON.stringify({ text: plain }) });
+      if (!r.ok) throw new Error((await r.json()).error);
+      piperAudio = new Audio(URL.createObjectURL(await r.blob()));
+      piperAudio.playbackRate = settings.rate || 1;
+      piperAudio.play();
+      return;
+    } catch (e) { toast("Private read-aloud failed (" + e.message + "), using the system voice"); }
+  }
+  const u = new SpeechSynthesisUtterance(plain);
+  const v = speechSynthesis.getVoices().find((x) => x.name === settings.voice);
+  if (v) u.voice = v;
+  u.rate = settings.rate || 1;
+  speechSynthesis.speak(u);
+}
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null;
+if (SR || navigator.mediaDevices?.getUserMedia) $("micBtn").hidden = false;
+
+// Private voice typing: record, convert to 16 kHz WAV (what Whisper expects), transcribe on this PC.
+let recorder = null;
+async function toWav16k(blob) {
+  const ctx = new AudioContext();
+  const audio = await ctx.decodeAudioData(await blob.arrayBuffer());
+  ctx.close();
+  const off = new OfflineAudioContext(1, Math.ceil(audio.duration * 16000), 16000);
+  const src = off.createBufferSource();
+  src.buffer = audio; src.connect(off.destination); src.start();
+  const pcm = (await off.startRendering()).getChannelData(0);
+  const buf = new DataView(new ArrayBuffer(44 + pcm.length * 2));
+  const str = (o, s) => [...s].forEach((c, i) => buf.setUint8(o + i, c.charCodeAt(0)));
+  str(0, "RIFF"); buf.setUint32(4, 36 + pcm.length * 2, true); str(8, "WAVEfmt ");
+  buf.setUint32(16, 16, true); buf.setUint16(20, 1, true); buf.setUint16(22, 1, true); buf.setUint32(24, 16000, true);
+  buf.setUint32(28, 32000, true); buf.setUint16(32, 2, true); buf.setUint16(34, 16, true); str(36, "data"); buf.setUint32(40, pcm.length * 2, true);
+  for (let i = 0; i < pcm.length; i++) buf.setInt16(44 + i * 2, Math.max(-1, Math.min(1, pcm[i])) * 0x7fff, true);
+  return new Blob([buf], { type: "audio/wav" });
+}
+async function localVoiceTyping() {
+  if (recorder) { recorder.stop(); return; }
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch { return toast("Microphone access was blocked. Allow it in the browser to use voice typing."); }
+  const chunks = [];
+  recorder = new MediaRecorder(stream);
+  recorder.ondataavailable = (e) => chunks.push(e.data);
+  recorder.onstop = async () => {
+    stream.getTracks().forEach((t) => t.stop());
+    recorder = null;
+    $("micBtn").classList.remove("rec");
+    $("micBtn").textContent = "⏳";
+    try {
+      const r = await fetch("/voice/transcribe", { method: "POST", body: await toWav16k(new Blob(chunks)) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+      if (d.text) { input.value = (input.value ? input.value.replace(/\s*$/, " ") : "") + d.text; input.oninput(); }
+      else toast("No speech was heard.");
+    } catch (e) { toast("Voice typing failed: " + e.message); }
+    $("micBtn").textContent = "🎤";
+    input.focus();
+  };
+  recorder.start();
+  $("micBtn").classList.add("rec");
+  toast("Listening… click 🎤 again when you're done");
+}
+
+$("micBtn").onclick = () => {
+  if (settings.voiceEngine === "local" && caps2.voice?.stt) return localVoiceTyping();
+  if (!SR) return toast("Voice typing on this PC isn't installed, and this browser has no online voice typing.");
+  if (rec) { rec.stop(); return; }
+  if (!settings.voiceOk) {
+    if (!confirm("Voice typing uses your browser's online speech service (Microsoft for Edge, Google for Chrome), so what you say is sent to them to be turned into text. Your chats themselves stay on your PC.\n\nTurn on voice typing?")) return;
+    settings.voiceOk = true; saveAll();
+  }
+  rec = new SR();
+  rec.continuous = true; rec.interimResults = true; rec.lang = navigator.language || "en-US";
+  const base = input.value ? input.value.replace(/\s*$/, " ") : "";
+  rec.onresult = (e) => { let t = ""; for (const r of e.results) t += r[0].transcript; input.value = base + t; input.oninput(); };
+  rec.onerror = (e) => { if (e.error !== "no-speech" && e.error !== "aborted") toast("Voice typing problem: " + e.error); };
+  rec.onend = () => { rec = null; $("micBtn").classList.remove("rec"); input.focus(); };
+  rec.start();
+  $("micBtn").classList.add("rec");
+};
+
+// ================= start =================
+for (const c of chats) { c.presetId ??= "general"; }
+applyTheme();
+renderPresetSelect();
+$("gateToggle").checked = settings.gate;
+$("showThink").checked = settings.think;
+$("compareToggle").checked = settings.compare;
+$("mode").value = settings.mode;
+$("mode").onchange();
+$("vsWrap").hidden = !settings.compare;
+if (chats.length) { current = chats[0]; render(); } else newChat();
+$("useLibrary").checked = settings.useLibrary;
+applyInspector();
+loadModels();
+refreshImageEngine();
+refreshCapabilities().then(refreshMcp);
+</script>
+</body>
+</html>

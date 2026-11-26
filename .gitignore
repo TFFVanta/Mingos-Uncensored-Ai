@@ -1,0 +1,25 @@
+# --- Your private data: chats, memory, presets, library, pictures, logs, shutdown keys ---
+data/
+
+# --- Files the agents create ---
+workspace/
+
+# --- Downloaded engines and models (several GB; see README for where each comes from) ---
+image-engine/
+voice/
+vendor/
+node_modules/
+
+# SearXNG: the downloaded source, its Python environment, and its settings (contains a secret key)
+search-engine/searxng/
+search-engine/venv/
+search-engine/settings.yml
+
+# --- Local tool settings ---
+.claude/
+
+# --- OS / editor clutter ---
+Thumbs.db
+Desktop.ini
+*.tmp
+*.part

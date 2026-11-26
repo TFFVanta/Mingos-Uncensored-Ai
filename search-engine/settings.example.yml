@@ -1,0 +1,17 @@
+# Local private search engine (SearXNG). Copy this to settings.yml and replace secret_key
+# with a long random string, e.g.:  python -c "import secrets; print(secrets.token_hex(24))"
+use_default_settings: true
+general:
+  instance_name: "Local Chat search"
+server:
+  bind_address: "127.0.0.1"
+  port: 8888
+  secret_key: "REPLACE_WITH_A_LONG_RANDOM_STRING"
+  limiter: false
+  public_instance: false
+  image_proxy: false
+search:
+  safe_search: 0
+  formats:
+    - html
+    - json
