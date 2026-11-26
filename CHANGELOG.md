@@ -2,6 +2,16 @@
 
 All notable changes to Mingo's Uncensored AI. Versions follow [Semantic Versioning](https://semver.org).
 
+## [1.0.1] - 2026-11-26
+
+### Fixed
+- Chatting right after making a picture could fail with "out of memory": the image engine releases
+  graphics memory a moment after it's asked to, and the chat model tried to load before then. The app
+  now waits until the memory is actually free.
+
+### Added
+- A demo GIF at the top of the README.
+
 ## [1.0.0] - 2026-11-26
 
 First public release, created by Mingo.

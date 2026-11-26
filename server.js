@@ -147,8 +147,20 @@ async function unloadOllama() {
 async function freeComfy() {
   if (!comfyHasModel) return;
   comfyHasModel = false;
+  const vram = async () => {
+    try { const d = (await (await fetch(COMFY + "/system_stats", { signal: AbortSignal.timeout(1500) })).json()).devices?.[0]; return d ? { free: d.vram_free, total: d.vram_total } : null; }
+    catch { return null; }
+  };
   try {
+    const before = await vram();
     await fetch(COMFY + "/free", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ unload_models: true, free_memory: true }) });
+    // The image engine frees memory a moment after it's asked to. Wait until the card shows it, so Ollama
+    // doesn't try to load the chat model into memory that's still taken (that fails with "out of memory").
+    for (let i = 0; i < 40 && before; i++) {
+      await sleep(250);
+      const now = await vram();
+      if (!now || now.free >= now.total * 0.6 || now.free > before.free + 2 * 1024 ** 3) break;
+    }
   } catch {}
 }
 const clampInt = (v, lo, hi, d) => (Number.isFinite(+v) ? Math.min(hi, Math.max(lo, Math.round(+v))) : d);

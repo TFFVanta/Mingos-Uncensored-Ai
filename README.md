@@ -11,6 +11,11 @@
 </p>
 
 <p align="center">
+  <img src="docs/demo.gif" alt="Demo: asking about your own documents, the AI view, making a picture, and an agent team writing and running code" width="820">
+  <br><sub>Real, unedited use, with waiting time sped up: a question answered from your own documents, the 🧠 AI view, a picture, and an agent team that writes and runs code.</sub>
+</p>
+
+<p align="center">
   <a href="#install"><b>⬇️ Install</b></a> ·
   <a href="INSTRUCTIONS.md"><b>📖 User guide</b></a> ·
   <a href="#screenshots"><b>🖼️ Screenshots</b></a> ·
@@ -19,7 +24,7 @@
 
 # Mingo's Uncensored AI
 
-**Created by Mingo.** · [MIT License](LICENSE) · Version 1.0.0 · For adults (18+)
+**Created by Mingo.** · [MIT License](LICENSE) · Version 1.0.1 · For adults (18+)
 
 📖 **New here? Read the [user guide](INSTRUCTIONS.md)** for how to chat, make pictures, run agent swarms and more.
 
