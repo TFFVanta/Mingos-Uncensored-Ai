@@ -10,6 +10,30 @@ Ready-made posts you can copy, tweak and share. The link:
 
 ---
 
+## Media kit
+
+All of it shows real use of the app with demo chats. In the videos, waiting time is sped up and marked
+"faster", so nobody is misled. Posts with a video or picture get far more attention than text alone.
+
+| File | Best for |
+|---|---|
+| [docs/clips/full-demo.mp4](docs/clips/full-demo.mp4) (100 s) | YouTube, X/Bluesky, the top of a Reddit post |
+| [docs/clips/swarm.mp4](docs/clips/swarm.mp4) (30 s) | r/LocalLLaMA, Hacker News comments, AI agent communities |
+| [docs/clips/picture.mp4](docs/clips/picture.mp4) (20 s) | r/StableDiffusion, art communities |
+| [docs/clips/library.mp4](docs/clips/library.mp4) (24 s) | r/selfhosted, privacy communities ("ask your own documents") |
+| [docs/clips/compare.mp4](docs/clips/compare.mp4) (20 s) | r/ollama, model comparison threads |
+| [docs/clips/themes.mp4](docs/clips/themes.mp4) (18 s) | Short posts, Threads, Discord |
+| [docs/demo.gif](docs/demo.gif) | Places that don't play videos (forums, some Discord servers) |
+| [docs/social-preview.png](docs/social-preview.png) | Link previews, a post's cover picture |
+| [docs/screenshots/themes.png](docs/screenshots/themes.png) | One picture that shows the whole look |
+| [docs/screenshots/](docs/screenshots/) | Image galleries: agent-swarm, pictures, ai-view, debate, compare, presets, models, attachments |
+
+**Tips:** on Reddit, upload the video to the post itself rather than linking it, and put the GitHub link in the
+first comment if the subreddit prefers that. On X, the video autoplays without sound, so the title cards
+explain each clip. To download a file, open it on GitHub and choose "Download raw file".
+
+---
+
 ## Reddit: r/LocalLLaMA
 
 **Title:** I built a free, open-source desktop app that runs abliterated models with agent swarms, SDXL pictures, a document library and private voice, all local

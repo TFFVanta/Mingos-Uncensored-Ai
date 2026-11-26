@@ -104,6 +104,23 @@ It's for adults (18+) only.
 | **🧠 AI view + 📚 library:** see exactly what the model was given, including your documents | **⚖️ Debate mode:** agents argue it out, a judge decides, every step is logged |
 | ![Two models answering side by side](docs/screenshots/compare.png) | ![Agent settings: approvals, sandbox, private search and tools](docs/screenshots/settings-agents.png) |
 | **Compare:** two models side by side, keep the better answer | **You're in control:** approvals, sandboxed code, private search, tools |
+| ![A presets editor showing the Coder preset's instructions and expectations](docs/screenshots/presets.png) | ![The model manager listing installed uncensored models with download and delete buttons](docs/screenshots/models.png) |
+| **Presets:** ready-made personalities with expectations the quality check enforces | **Models:** download, inspect and remove models without a terminal |
+| ![A chat answering questions about an attached PDF and Python file](docs/screenshots/attachments.png) | ![A snowy forest cabin at dusk, made in the chat](docs/screenshots/pictures-cabin.png) |
+| **Attachments:** drop in PDFs, code, text or pictures and ask about them | **More pictures:** everything is drawn on your own graphics card |
+
+<details>
+<summary><b>🎨 Six themes</b> (click to show)</summary>
+
+![The same chat in the Midnight, Ocean, Forest, Ember, Grape and Paper themes](docs/screenshots/themes.png)
+
+</details>
+
+### Video clips
+
+Short MP4s of real use (waiting time sped up and marked): [documents + AI view](docs/clips/library.mp4) ·
+[pictures](docs/clips/picture.mp4) · [agent team](docs/clips/swarm.mp4) · [compare models](docs/clips/compare.mp4) ·
+[themes](docs/clips/themes.mp4) · [full 100-second demo](docs/clips/full-demo.mp4)
 
 ## Features
 
