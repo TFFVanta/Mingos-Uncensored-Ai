@@ -1,4 +1,4 @@
-# Starts Local Chat as a desktop app: the server runs hidden in the background and the
+# Starts Mingo's Uncensored AI as a desktop app: the server runs hidden in the background and the
 # chat opens in its own window. Closing the window stops the server (if this launch started it).
 param([int]$Port = 3000)
 $ErrorActionPreference = 'Stop'
@@ -9,25 +9,25 @@ $url  = "http://localhost:$port"
 
 function Show-Error($msg) {
   Add-Type -AssemblyName PresentationFramework
-  [void][System.Windows.MessageBox]::Show($msg, 'Local Chat', 'OK', 'Warning')
+  [void][System.Windows.MessageBox]::Show($msg, "Mingo's Uncensored AI", 'OK', 'Warning')
 }
 function Test-Server {
   # 127.0.0.1, not localhost: Windows PowerShell tries IPv6 first for "localhost" and times out
-  try { (Invoke-WebRequest "http://127.0.0.1:$port/store" -UseBasicParsing -TimeoutSec 2).StatusCode -eq 200 } catch { $false }
+  try { (Invoke-WebRequest "http://127.0.0.1:$port/health" -UseBasicParsing -TimeoutSec 2).StatusCode -eq 200 } catch { $false }
 }
 
 # 1. Start the server unless it's already running
 $server = $null
 if (-not (Test-Server)) {
   if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
-    Show-Error "Local Chat needs Node.js, which wasn't found. Install it from nodejs.org and try again."
+    Show-Error "Mingo's Uncensored AI needs Node.js, which wasn't found. Install it from nodejs.org and try again."
     exit 1
   }
   $server = Start-Process node -ArgumentList "`"$dir\server.js`"" -WorkingDirectory $dir -WindowStyle Hidden -PassThru
   for ($i = 0; $i -lt 40 -and -not (Test-Server); $i++) { Start-Sleep -Milliseconds 250 }
   if (-not (Test-Server)) {
     if ($server -and -not $server.HasExited) { Stop-Process -Id $server.Id -Force -ErrorAction SilentlyContinue }
-    Show-Error "Local Chat couldn't start its server.`n`nIf an older Local Chat window (a black console window) is still open, close it and try again. Otherwise something else may be using port $port."
+    Show-Error "Mingo's Uncensored AI couldn't start its server.`n`nIf an older Mingo's Uncensored AI window (a black console window) is still open, close it and try again. Otherwise something else may be using port $port."
     exit 1
   }
 }
@@ -45,16 +45,20 @@ if (-not $browser) {
   exit 0
 }
 
-# A separate browser profile keeps this window independent, so we can tell when it closes.
-$appProfile = Join-Path $dir 'data\app-window'
-$window = Start-Process $browser -PassThru -ArgumentList @(
+# A separate browser profile (one per port) keeps this window independent, so we can tell when it closes.
+$appProfile = if ($port -eq 3000) { Join-Path $dir 'data\app-window' } else { Join-Path $dir "data\app-window-$port" }
+Start-Process $browser -ArgumentList @(
   "--app=$url",
   "--user-data-dir=`"$appProfile`"",
   "--window-size=1320,880",
   "--no-first-run",
   "--no-default-browser-check"
-)
-$window.WaitForExit()
+) | Out-Null
+# Wait until every browser process using this profile has closed. (If the app window was already
+# open, Edge hands the new window to it and the process we started exits at once.)
+function Get-AppBrowser { Get-CimInstance Win32_Process -Filter "Name='msedge.exe' OR Name='chrome.exe'" | Where-Object { $_.CommandLine -and $_.CommandLine.Contains($appProfile) } }
+for ($i = 0; $i -lt 20 -and -not (Get-AppBrowser); $i++) { Start-Sleep -Milliseconds 500 }
+while (Get-AppBrowser) { Start-Sleep -Seconds 2 }
 
 # 3. Window closed: stop the server and everything it started (image engine, search engine,
 #    background browser, MCP servers) if this launch started it.

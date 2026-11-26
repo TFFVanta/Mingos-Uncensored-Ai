@@ -1,4 +1,4 @@
-// Local Chat code sandbox. Runs agents' Python (Pyodide: CPython compiled to WebAssembly) or JavaScript
+// Mingo's Uncensored AI code sandbox. Runs agents' Python (Pyodide: CPython compiled to WebAssembly) or JavaScript
 // inside a browser worker. It has no access to your PC's files or programs, and network access is
 // switched off before any agent code runs. Files live in an in-memory copy of the workspace.
 let pyodide = null;

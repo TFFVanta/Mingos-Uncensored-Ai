@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Local Chat</title>
+<title>Mingo's Uncensored AI</title>
 <link rel="icon" href="/icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <style>
@@ -42,6 +42,18 @@
   .convo button:not(.pinned)[data-pin] { filter: grayscale(1); }
   .convo button[data-del]:hover { color: var(--danger); }
   .side-foot { border-top: 1px solid var(--line); padding: 10px 12px; }
+  .credit { font-size: 11px; color: var(--muted); text-align: center; margin-top: 8px; }
+  .credit b { color: var(--text); font-weight: 600; }
+  .about { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; background: var(--panel2); }
+  .about a { color: var(--accent); }
+  #welcome { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; padding: 20px; }
+  #welcome[hidden] { display: none; }
+  .wbox { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px 24px; width: min(600px, 100%); max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+  .wbox a { color: var(--accent); }
+  .wlist { padding-left: 4px; list-style: none; margin: 14px 0; }
+  .wlist li { margin-bottom: 8px; font-size: 14px; }
+  #wChecks { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin: 0 0 12px; font-size: 13px; }
+  #wChecks:empty { display: none; }
 
   /* main */
   main { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
@@ -256,7 +268,8 @@
   <button class="new" id="newChat">+ New chat</button>
   <div class="search"><input type="search" id="search" placeholder="Search chats…"></div>
   <div id="convos"></div>
-  <div class="side-foot"><button class="ghost" id="openSettings" style="width:100%">⚙ Settings</button></div>
+  <div class="side-foot"><button class="ghost" id="openSettings" style="width:100%">⚙ Settings</button>
+    <div class="credit">Mingo's Uncensored AI · created by <b>Mingo</b></div></div>
 </aside>
 <main>
   <header>
@@ -364,7 +377,7 @@
           <option value="both">Both</option>
         </select>
       </div>
-      <small class="help">Pictures use your graphics card too. Local Chat automatically frees memory when switching between chatting and drawing, so the first message or picture after a switch takes a few extra seconds.</small>
+      <small class="help">Pictures use your graphics card too. Mingo's Uncensored AI automatically frees memory when switching between chatting and drawing, so the first message or picture after a switch takes a few extra seconds.</small>
 
       <h3>Voice</h3>
       <div class="field">
@@ -395,6 +408,16 @@
         <input type="file" id="importFile" accept=".json,application/json" hidden>
       </div>
       <small class="help">Importing adds the backup's chats to yours, and replaces your presets and memory if the backup has them.</small>
+
+      <h3>About</h3>
+      <div class="about">
+        <div style="font-size:15px"><b>Mingo's Uncensored AI</b></div>
+        <div class="note" style="margin:2px 0 8px">Created by <b style="color:var(--text)">Mingo</b></div>
+        <div style="font-size:13px">A private AI chat app that runs entirely on your PC. Version <span id="aboutVersion"></span>.
+          <a href="/guide" target="_blank">📖 Open the user guide</a></div>
+        <div style="font-size:12.5px; margin-top:8px"><a href="/legal/TERMS" target="_blank">Terms of Use</a> · <a href="/legal/ACCEPTABLE_USE" target="_blank">Acceptable Use</a> · <a href="/legal/PRIVACY" target="_blank">Privacy</a> · <a href="/legal/DISCLAIMER" target="_blank">Disclaimer</a> · <a href="/legal/THIRD_PARTY_NOTICES" target="_blank">Third-party notices</a> · <a href="/legal/LICENSE" target="_blank">MIT License</a></div>
+        <small class="help">Built on open-source projects including Ollama, ComfyUI, SDXL, SearXNG, Pyodide, Playwright, whisper.cpp and Piper.</small>
+      </div>
     </div>
 
     <div class="tabbody" id="tab-appearance">
@@ -553,6 +576,22 @@
 </div>
 <div id="toast"></div>
 
+<div id="welcome" hidden>
+  <div class="wbox">
+    <div class="row" style="gap:14px; margin-bottom:6px"><img src="/icon.png" width="52" height="52" alt="">
+      <div><h2 style="margin:0">Welcome to Mingo's Uncensored AI</h2><div class="note">Created by <b style="color:var(--text)">Mingo</b> · version <span id="wVersion"></span></div></div></div>
+    <ul class="wlist">
+      <li>🔒 <b>Private.</b> Everything runs on your PC. No accounts, no tracking; your chats never leave this computer unless you use an online feature like web search.</li>
+      <li>🔓 <b>Uncensored.</b> The models have had their refusals removed. They can produce adult, offensive or wrong content.</li>
+      <li>⚖️ <b>You're responsible</b> for what you create and how you use it. Some things are never allowed, and sexual images of minors are always blocked.</li>
+    </ul>
+    <div id="wChecks" class="note"></div>
+    <label class="check"><input type="checkbox" id="wAge"> I'm 18 or older.</label>
+    <label class="check" style="align-items:flex-start"><input type="checkbox" id="wTerms" style="margin-top:4px"> <span>I agree to the <a href="/legal/TERMS" target="_blank">Terms of Use</a> and <a href="/legal/ACCEPTABLE_USE" target="_blank">Acceptable Use Policy</a>, and I've read the <a href="/legal/PRIVACY" target="_blank">Privacy Policy</a> and <a href="/legal/DISCLAIMER" target="_blank">Disclaimer</a>.</span></label>
+    <div class="row end" style="margin-top:12px"><a href="/guide" target="_blank" class="ghost" style="text-decoration:none">📖 User guide</a><button class="primary" id="wGo" disabled>Start</button></div>
+  </div>
+</div>
+
 <script type="module">
 // The server puts a per-session key here; private endpoints require it (sandboxed code never sees it).
 const UI_TOKEN = "__UI_TOKEN__";
@@ -707,7 +746,7 @@ async function persistNow() {
       const r = await fetch("/store", { method: "PUT", body, headers: { "content-type": "application/json" } });
       if (!r.ok) throw new Error();
       return true;
-    } catch { toast("Couldn't save. Is the Local Chat server still running?"); return false; }
+    } catch { toast("Couldn't save. Is the Mingo's Uncensored AI server still running?"); return false; }
   }
   try { localStorage.setItem("localchat", body); return true; } catch { toast("Browser storage is full; export a backup."); return false; }
 }
@@ -919,7 +958,7 @@ $("importFile").onchange = async () => {
     saveAll(true); renderPresetSelect(); renderPresetEditor(); renderMemory(); render();
     toast("Backup imported.");
   } catch (e) {
-    toast("Couldn't import that file: it isn't a Local Chat backup.");
+    toast("Couldn't import that file: it isn't a Mingo's Uncensored AI backup.");
   }
 };
 
@@ -2873,6 +2912,31 @@ $("mode").onchange();
 $("vsWrap").hidden = !settings.compare;
 if (chats.length) { current = chats[0]; render(); } else newChat();
 $("useLibrary").checked = settings.useLibrary;
+
+// ----- first run: age check, terms, and a quick readiness check -----
+const TERMS_VERSION = "2026-11-26";   // bump when the Terms or Acceptable Use Policy change
+fetch("/health").then((r) => r.json()).then((h) => { $("wVersion").textContent = h.version; $("aboutVersion").textContent = h.version; }).catch(() => {});
+async function showWelcome() {
+  $("welcome").hidden = false;
+  const checks = [];
+  try {
+    const d = await (await fetch("/api/tags")).json();
+    const chatModels = (d.models || []).filter((m) => !/embed/i.test(m.name));
+    checks.push("✅ Ollama is running");
+    checks.push(chatModels.length ? `✅ ${chatModels.length} chat model${chatModels.length > 1 ? "s" : ""} installed` : "⚠️ No chat model yet: after you start, open ⚙ Settings → Models and download one (huihui_ai/qwen3-abliterated:8b is a good first choice).");
+  } catch { checks.push("⚠️ Ollama isn't running. Start Ollama (ollama.com) so the AI can answer."); }
+  $("wChecks").innerHTML = checks.join("<br>");
+}
+const updateGo = () => { $("wGo").disabled = !($("wAge").checked && $("wTerms").checked); };
+$("wAge").onchange = updateGo; $("wTerms").onchange = updateGo;
+$("wGo").onclick = () => {
+  settings.accepted = { version: TERMS_VERSION, at: new Date().toISOString() };
+  saveAll(true);
+  $("welcome").hidden = true;
+  $("input").focus();
+};
+if (settings.accepted?.version !== TERMS_VERSION) showWelcome();
+
 applyInspector();
 loadModels();
 refreshImageEngine();

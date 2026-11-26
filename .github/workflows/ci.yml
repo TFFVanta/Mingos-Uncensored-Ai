@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run check
+      - name: Check the installer and launcher parse
+        shell: powershell
+        run: |
+          foreach ($f in 'setup\Setup.ps1', 'LocalChat.ps1') {
+            $e = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile("$PWD\$f", [ref]$null, [ref]$e)
+            if ($e.Count) { $e; exit 1 }
+          }
+      - run: npm test

@@ -3,9 +3,16 @@
   "version": "1.0.0",
   "private": true,
   "description": "Mingo's Uncensored AI: a private AI chat app that runs on your own PC",
+  "author": "Mingo",
+  "license": "MIT",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test tests/",
+    "check": "node --check server.js && node --check sandbox-worker.js"
+  },
+  "engines": {
+    "node": ">=22"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",

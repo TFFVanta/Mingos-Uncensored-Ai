@@ -1,4 +1,4 @@
-// Local Chat server: serves the app, saves your data to disk, and proxies /api/* to Ollama.
+// Mingo's Uncensored AI server: serves the app, saves your data to disk, and proxies /api/* to Ollama.
 // No dependencies. Run: node server.js  ->  http://localhost:3000
 const http = require("http");
 const fs = require("fs");
@@ -9,7 +9,27 @@ const { spawn } = require("child_process");
 
 const PORT = +process.env.PORT || 3000;
 const OLLAMA = process.env.OLLAMA_HOST || "http://127.0.0.1:11434";
-const DATA_DIR = path.join(__dirname, "data");
+// LC_DATA_DIR / LC_WORKSPACE let the test suite run against throwaway folders instead of your real data.
+const DATA_DIR = process.env.LC_DATA_DIR || path.join(__dirname, "data");
+const PKG = JSON.parse(fs.readFileSync(path.join(__dirname, "package.json"), "utf8"));
+const VERSION = PKG.version;
+const APP_NAME = "Mingo's Uncensored AI";
+
+// ---- logging: data\server.log, rotated at 2 MB so it never grows without limit ----
+const LOG = path.join(DATA_DIR, "server.log");
+function log(level, ...parts) {
+  const line = `${new Date().toISOString()} [${level}] ${parts.map((p) => (p instanceof Error ? p.stack || p.message : typeof p === "string" ? p : JSON.stringify(p))).join(" ")}\n`;
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    if (fs.existsSync(LOG) && fs.statSync(LOG).size > 2 * 1024 * 1024) fs.renameSync(LOG, LOG + ".1");
+    fs.appendFileSync(LOG, line);
+  } catch {}
+  if (level !== "info") process.stderr.write(line);
+}
+// One bad request or tool must never take the whole app down.
+process.on("uncaughtException", (e) => log("error", "uncaught:", e));
+process.on("unhandledRejection", (e) => log("error", "unhandled promise:", e));
+if (+process.versions.node.split(".")[0] < 22) { console.error(`${APP_NAME} needs Node.js 22 or newer (you have ${process.versions.node}).`); process.exit(1); }
 const STORE = path.join(DATA_DIR, "store.json");
 const BACKUP = path.join(DATA_DIR, "store.backup.json");
 
@@ -210,8 +230,22 @@ async function handleImage(req, res) {
   res.end();
 }
 
+// Hard rule for pictures, not a setting: never generate sexual imagery involving minors.
+// Checked here on the server so it covers the 🖼 button, agents, and AI-written prompts alike.
+const MINOR_WORDS = /\b(child|children|childlike|kid|kids|minor|minors|underage|under-age|preteen|pre-teen|tween|toddler|infant|bab(y|ies)|little (girl|boy)s?|young (girl|boy)s?|schoolgirls?|schoolboys?|teen|teens|teenager|teenagers|teenage|loli|lolita|shota|jailbait|elementary school|middle school|grade schooler)\b/i;
+const SEXUAL_WORDS = /\b(nude|nudes|naked|nudity|nsfw|sex|sexual|sexualized|sexy|porn|porno|pornographic|erotic|erotica|explicit|topless|bottomless|lingerie|undress(ed|ing)?|strip(ping|ped)?|genitals?|breasts?|nipples?|lewd|hentai|orgasm|seductive|provocative|intercourse|aroused|fetish)\b/i;
+function minorSexualContent(text) {
+  const t = String(text || "");
+  const youngAge = [...t.matchAll(/\b(\d{1,2})\s*[- ]?\s*(yo|y\/o|years?[- ]old|yrs?[- ]old)\b/gi)].some((m) => +m[1] < 18);
+  return (MINOR_WORDS.test(t) || youngAge) && SEXUAL_WORDS.test(t);
+}
+
 // Draws one picture, reporting progress through send(); used by the 🖼 button and by agents.
 async function generateImage(opts, send, job = {}) {
+  if (opts.kind !== "upscale" && minorSexualContent(opts.prompt)) {
+    log("warn", "blocked a picture request that combined minors with sexual content");
+    return send({ stage: "error", error: `This picture request was blocked. ${APP_NAME} never creates sexual images involving minors.` });
+  }
   let ws = null, promptId = null;
   job.cancel = () => { ws?.close(); if (promptId) fetch(COMFY + "/interrupt", { method: "POST" }).catch(() => {}); };
   try {
@@ -275,7 +309,7 @@ async function generateImage(opts, send, job = {}) {
 // Everything agents touch on disk is confined to LocalChat\workspace.
 const dns = require("dns").promises;
 const net = require("net");
-const WS = path.join(__dirname, "workspace");
+const WS = process.env.LC_WORKSPACE || path.join(__dirname, "workspace");
 fs.mkdirSync(WS, { recursive: true });
 const WS_REAL = fs.realpathSync(WS);
 
@@ -773,12 +807,11 @@ const UI_TOKEN = crypto.randomBytes(24).toString("hex");
 const SHUTDOWN_KEY = crypto.randomBytes(24).toString("hex");
 fs.mkdirSync(DATA_DIR, { recursive: true });
 fs.writeFileSync(path.join(DATA_DIR, `.shutdown-key-${PORT}`), SHUTDOWN_KEY);
-const PUBLIC = /^\/($|index\.html$|icon\.png$|manifest\.webmanifest$|sandbox-worker\.js$|vendor\/|images\/|workspace\/|favicon)/;
+const PUBLIC = /^\/($|index\.html$|icon\.png$|manifest\.webmanifest$|sandbox-worker\.js$|guide$|health$|legal\/|vendor\/|images\/|workspace\/|favicon)/;
 const VENDOR = { pyodide: path.join(__dirname, "vendor", "pyodide") };
 const MIME = { ".js": "text/javascript", ".mjs": "text/javascript", ".wasm": "application/wasm", ".json": "application/json", ".zip": "application/zip", ".whl": "application/octet-stream", ".tar": "application/x-tar", ".png": "image/png" };
 
-http
-  .createServer(async (req, res) => {
+async function handleRequest(req, res) {
     if (!okHost(req.headers.host) || !okOrigin(req.headers.origin)) return json(res, 403, { error: "Forbidden" });
     const url = new URL(req.url, `http://${req.headers.host}`);
     const pathname = url.pathname;
@@ -788,6 +821,17 @@ http
     }
     if (!PUBLIC.test(pathname) && req.headers["x-ui-token"] !== UI_TOKEN && url.searchParams.get("t") !== UI_TOKEN)
       return json(res, 401, { error: "Unauthorized" });
+
+    // ---- health and version (used by the launcher and installer) ----
+    if (pathname === "/health") return json(res, 200, { ok: true, app: APP_NAME, version: VERSION });
+    // ---- legal documents, readable inside the app ----
+    const legal = pathname.match(/^\/legal\/(LICENSE|TERMS|PRIVACY|ACCEPTABLE_USE|THIRD_PARTY_NOTICES|DISCLAIMER)$/);
+    if (legal) {
+      const f = path.join(__dirname, legal[1] === "LICENSE" ? "LICENSE" : legal[1] + ".md");
+      if (!fs.existsSync(f)) { res.writeHead(404); return res.end("Not found"); }
+      res.writeHead(200, { "content-type": "text/plain; charset=utf-8", "cache-control": "no-cache" });
+      return fs.createReadStream(f).pipe(res);
+    }
 
     // ---- the page itself, with this session's key ----
     if (pathname === "/" || pathname === "/index.html") {
@@ -928,6 +972,7 @@ http
         const body = JSON.parse((await readBody(req, 20e6)).toString("utf8") || "{}");
         return json(res, 200, { ok: true, result: await fn(body.args || {}, body.cfg || {}) });
       } catch (e) {
+        log("warn", `tool ${tool[1]} failed:`, e.message);
         return json(res, 200, { ok: false, error: e.message });
       }
     }
@@ -944,6 +989,10 @@ http
     }
 
     // ---- app files ----
+    if (pathname === "/guide") {   // the user guide, as plain text in a new window
+      res.writeHead(200, { "content-type": "text/plain; charset=utf-8", "cache-control": "no-cache" });
+      return fs.createReadStream(path.join(__dirname, "INSTRUCTIONS.md")).pipe(res);
+    }
     if (pathname === "/sandbox-worker.js") {
       // The browser enforces this on the sandbox: it may only load from this app (for Pyodide itself),
       // so sandboxed code can't send anything to the internet. Private endpoints also need the page's key.
@@ -958,15 +1007,25 @@ http
     }
     res.writeHead(404);
     res.end("Not found");
-  })
+}
+
+http
+  .createServer((req, res) => handleRequest(req, res).catch((e) => {
+    log("error", `${req.method} ${req.url.split("?")[0]}:`, e);
+    if (!res.headersSent) json(res, 500, { error: "Something went wrong. Details are in data\\server.log." });
+    else res.end();
+  }))
   .on("error", (err) => {
     if (err.code === "EADDRINUSE") {
-      console.log(`Local Chat is already running at http://localhost:${PORT}`);
+      console.log(`${APP_NAME} is already running at http://localhost:${PORT}`);
       process.exit(0);
     }
     throw err;
   })
-  .listen(PORT, "127.0.0.1", () => {
-    console.log(`Local Chat running at http://localhost:${PORT}\nKeep this window open while chatting. Close it to stop the app.`);
-    mcpReload().catch(() => {});
+  .listen(PORT, "127.0.0.1", async () => {
+    console.log(`${APP_NAME} ${VERSION} running at http://localhost:${PORT}\nKeep this window open while chatting. Close it to stop the app.`);
+    log("info", `started ${APP_NAME} ${VERSION} on port ${PORT} (Node ${process.versions.node})`);
+    try { await fetch(OLLAMA + "/api/version", { signal: AbortSignal.timeout(3000) }); }
+    catch { console.log("Note: Ollama isn't reachable yet. Start Ollama to chat."); log("warn", "Ollama not reachable at startup"); }
+    mcpReload().catch((e) => log("warn", "MCP:", e));
   });

@@ -1,6 +1,6 @@
 {
-  "name": "Local Chat",
-  "short_name": "Local Chat",
+  "name": "Mingo's Uncensored AI",
+  "short_name": "Mingo's Uncensored AI",
   "description": "Private AI chat running on your own PC",
   "start_url": "/",
   "display": "standalone",

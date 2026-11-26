@@ -1,5 +1,12 @@
 # Mingo's Uncensored AI
 
+**Created by Mingo.** · [MIT License](LICENSE) · Version 1.0.0 · For adults (18+)
+
+📖 **New here? Read the [user guide](INSTRUCTIONS.md)** for how to chat, make pictures, run agent swarms and more.
+
+> **Using this software means agreeing to the [Terms of Use](TERMS.md) and [Acceptable Use Policy](ACCEPTABLE_USE.md).**
+> The models are uncensored, and you're responsible for what you create. Sexual images of minors are always blocked.
+
 A private AI chat app that runs entirely on your own Windows PC. It uses uncensored (abliterated)
 language models through [Ollama](https://ollama.com), with agent swarms, picture making, voice and a
 document library. Nothing leaves your machine unless you turn on a feature that goes online
@@ -24,22 +31,39 @@ document library. Nothing leaves your machine unless you turn on a feature that 
 ## Requirements
 
 - Windows 10/11, an NVIDIA graphics card recommended (built and tested on an RTX 2060 12 GB)
-- [Ollama](https://ollama.com), [Node.js](https://nodejs.org) 22+, Python 3.11, [7-Zip](https://www.7-zip.org)
+- About 20 GB of free disk space for everything, or about 6 GB for chat only
 - Microsoft Edge (for the app window and the agents' browser)
+- The installer sets up the rest: [Node.js](https://nodejs.org) 22+, [Ollama](https://ollama.com) and Python 3.11
 
-## Setup
+## Install
+
+1. Download this repository (green **Code** button → **Download ZIP**) and unzip it somewhere permanent.
+2. Double-click **`Install.cmd`** and choose the features you want.
+3. Start **Mingo's Uncensored AI** from the new desktop shortcut.
+
+The installer downloads each component from its official source, pinned to tested versions, and
+verifies every file against its published fingerprint. It's safe to run again: anything already
+installed is checked and skipped. Options:
 
 ```powershell
-npm install
+.\Install.cmd -DryRun                    # show what would happen, change nothing
+.\Install.cmd -Yes                       # install the recommended set without questions
+.\Install.cmd -Components core,voice     # just these (core, pictures, pictures-plus, voice, search, sandbox, ocr)
+```
+
+### Manual setup
+
+```powershell
+npm ci
 ollama pull huihui_ai/qwen3-abliterated:8b
 ollama pull nomic-embed-text
 ```
 
-Then start it with `Start Local Chat.cmd`, or make a shortcut to `LocalChat.ps1` for the desktop-app
+Then start it with `Start.cmd`, or make a shortcut to `LocalChat.ps1` for the desktop-app
 window. Open http://localhost:3000 in a browser if you prefer.
 
 The core chat works with just that. Each optional feature needs downloads that are **not in this
-repository** (they're large and have their own licenses). Put them where Local Chat expects them:
+repository** (they're large and have their own licenses). Put them where Mingo's Uncensored AI expects them:
 
 | Feature | What to download | Where it goes |
 |---|---|---|
@@ -78,7 +102,35 @@ Both are excluded from git, so your conversations are never committed.
 - Abliterated models have had their refusals removed. They'll follow instructions they would
   otherwise decline, and they can still be wrong: check anything important.
 
+## Legal
+
+| Document | |
+|---|---|
+| [LICENSE](LICENSE) | MIT License for this project's code |
+| [TERMS.md](TERMS.md) | Terms of Use |
+| [ACCEPTABLE_USE.md](ACCEPTABLE_USE.md) | What the software may not be used for |
+| [PRIVACY.md](PRIVACY.md) | What's stored, and what goes online only when you use a feature |
+| [DISCLAIMER.md](DISCLAIMER.md) | Limits of AI output and agents |
+| [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) | Licenses of the tools and models it uses |
+
+These documents are also readable in the app (⚙ Settings → General → About).
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). Run the tests with
+`npm test`. Found a security problem? Please report it privately, as described in [SECURITY.md](SECURITY.md).
+Changes are listed in the [CHANGELOG](CHANGELOG.md).
+
+## Credits
+
+**Mingo's Uncensored AI** was created by **Mingo**.
+
+It's built on these open-source projects: Ollama, ComfyUI, Stable Diffusion XL, SDXL-Lightning,
+ControlNet, IP-Adapter, Real-ESRGAN, SearXNG, Pyodide, Playwright, tesseract.js, whisper.cpp, Piper,
+nomic-embed-text and the Model Context Protocol SDK. The default chat models are abliterated
+versions published by huihui_ai on the Ollama library.
+
 ## License notes
 
-This repository contains only Local Chat's own code. The tools it uses keep their own licenses
+This repository contains only Mingo's Uncensored AI's own code. The tools it uses keep their own licenses
 (for example SearXNG is AGPL-3.0, ComfyUI is GPL-3.0, and each model has its own license).

@@ -15,6 +15,9 @@ search-engine/searxng/
 search-engine/venv/
 search-engine/settings.yml
 
+# Installer scratch space
+setup/downloads/
+
 # --- Local tool settings ---
 .claude/
 
