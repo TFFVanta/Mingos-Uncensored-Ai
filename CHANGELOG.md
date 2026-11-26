@@ -24,3 +24,5 @@ First public release, created by Mingo.
   Third-Party Notices, all readable in the app.
 - Server hardening: per-session key for private endpoints, origin checks, crash protection, a
   rotating log file, clean shutdown of every helper process, and an automated test suite.
+- Screenshots, a social preview image, share buttons in the README and the app, and ready-made posts
+  ([SHARE.md](SHARE.md)).

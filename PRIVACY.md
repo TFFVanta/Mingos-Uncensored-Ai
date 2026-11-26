@@ -56,4 +56,4 @@ This policy may be updated in new versions. The version included with your copy 
 
 ## Contact
 
-Privacy questions: open an issue on the project's GitHub repository.
+Privacy questions: open an issue at https://github.com/TFFVanta/Mingos-Uncensored-Ai/issues.

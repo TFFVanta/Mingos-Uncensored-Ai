@@ -1,3 +1,22 @@
+<p align="center">
+  <img src="docs/social-preview.png" alt="Mingo's Uncensored AI: private, all-in-one AI that runs on your own PC" width="820">
+</p>
+
+<p align="center">
+  <a href="https://github.com/TFFVanta/Mingos-Uncensored-Ai/actions/workflows/ci.yml"><img src="https://github.com/TFFVanta/Mingos-Uncensored-Ai/actions/workflows/ci.yml/badge.svg" alt="Tests"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License"></a>
+  <img src="https://img.shields.io/badge/platform-Windows-0078D6" alt="Windows">
+  <img src="https://img.shields.io/badge/runs-100%25%20local-brightgreen" alt="Runs 100% local">
+  <a href="https://github.com/TFFVanta/Mingos-Uncensored-Ai/stargazers"><img src="https://img.shields.io/github/stars/TFFVanta/Mingos-Uncensored-Ai?style=social" alt="GitHub stars"></a>
+</p>
+
+<p align="center">
+  <a href="#install"><b>⬇️ Install</b></a> ·
+  <a href="INSTRUCTIONS.md"><b>📖 User guide</b></a> ·
+  <a href="#screenshots"><b>🖼️ Screenshots</b></a> ·
+  <a href="#share-it"><b>📣 Share</b></a>
+</p>
+
 # Mingo's Uncensored AI
 
 **Created by Mingo.** · [MIT License](LICENSE) · Version 1.0.0 · For adults (18+)
@@ -69,6 +88,17 @@ Writers and roleplayers who want a creative partner without guardrails getting i
 and security researchers who want an assistant that discusses their work frankly. Researchers,
 students and curious people who want direct answers. Anyone who wants an AI that's private by design.
 It's for adults (18+) only.
+
+## Screenshots
+
+| | |
+|---|---|
+| ![An agent team solving a task: the Coder's real code run and its output](docs/screenshots/agent-swarm.png) | ![A picture made in the chat with SDXL](docs/screenshots/pictures.png) |
+| **🐝 Agent swarms:** a team plans, writes and runs real code, then checks the answer | **🎨 Pictures:** describe it, the AI writes the prompt, SDXL draws it |
+| ![The AI view showing exactly what the model was given, including passages from your documents](docs/screenshots/ai-view.png) | ![A debate between agents, with every step in the AI view's timeline](docs/screenshots/debate.png) |
+| **🧠 AI view + 📚 library:** see exactly what the model was given, including your documents | **⚖️ Debate mode:** agents argue it out, a judge decides, every step is logged |
+| ![Two models answering side by side](docs/screenshots/compare.png) | ![Agent settings: approvals, sandbox, private search and tools](docs/screenshots/settings-agents.png) |
+| **Compare:** two models side by side, keep the better answer | **You're in control:** approvals, sandboxed code, private search, tools |
 
 ## Features
 
@@ -178,6 +208,25 @@ These documents are also readable in the app (⚙ Settings → General → About
 See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). Run the tests with
 `npm test`. Found a security problem? Please report it privately, as described in [SECURITY.md](SECURITY.md).
 Changes are listed in the [CHANGELOG](CHANGELOG.md).
+
+## Share it
+
+If Mingo's Uncensored AI is useful to you, a ⭐ on GitHub and a share help other people find it.
+
+<p>
+  <a href="https://www.reddit.com/submit?url=https%3A%2F%2Fgithub.com%2FTFFVanta%2FMingos-Uncensored-Ai&title=Mingo%27s%20Uncensored%20AI%3A%20private%2C%20all-in-one%20uncensored%20AI%20that%20runs%20on%20your%20own%20PC"><img src="https://img.shields.io/badge/Share_on-Reddit-FF4500?logo=reddit&logoColor=white" alt="Share on Reddit"></a>
+  <a href="https://twitter.com/intent/tweet?text=Mingo%27s%20Uncensored%20AI%3A%20private%2C%20all-in-one%20uncensored%20AI%20that%20runs%20on%20your%20own%20PC&url=https%3A%2F%2Fgithub.com%2FTFFVanta%2FMingos-Uncensored-Ai"><img src="https://img.shields.io/badge/Share_on-X-000000?logo=x&logoColor=white" alt="Share on X"></a>
+  <a href="https://news.ycombinator.com/submitlink?u=https%3A%2F%2Fgithub.com%2FTFFVanta%2FMingos-Uncensored-Ai&t=Mingo%27s%20Uncensored%20AI%3A%20a%20private%2C%20local%20AI%20workspace%20for%20Windows"><img src="https://img.shields.io/badge/Share_on-Hacker_News-F0652F?logo=ycombinator&logoColor=white" alt="Share on Hacker News"></a>
+  <a href="https://bsky.app/intent/compose?text=Mingo%27s%20Uncensored%20AI%3A%20private%2C%20all-in-one%20uncensored%20AI%20that%20runs%20on%20your%20own%20PC%20https%3A%2F%2Fgithub.com%2FTFFVanta%2FMingos-Uncensored-Ai"><img src="https://img.shields.io/badge/Share_on-Bluesky-0085FF?logo=bluesky&logoColor=white" alt="Share on Bluesky"></a>
+  <a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fgithub.com%2FTFFVanta%2FMingos-Uncensored-Ai"><img src="https://img.shields.io/badge/Share_on-LinkedIn-0A66C2?logo=linkedin&logoColor=white" alt="Share on LinkedIn"></a>
+  <a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fgithub.com%2FTFFVanta%2FMingos-Uncensored-Ai"><img src="https://img.shields.io/badge/Share_on-Facebook-1877F2?logo=facebook&logoColor=white" alt="Share on Facebook"></a>
+  <a href="https://wa.me/?text=Mingo%27s%20Uncensored%20AI%3A%20private%2C%20all-in-one%20uncensored%20AI%20that%20runs%20on%20your%20own%20PC%20https%3A%2F%2Fgithub.com%2FTFFVanta%2FMingos-Uncensored-Ai"><img src="https://img.shields.io/badge/Share_on-WhatsApp-25D366?logo=whatsapp&logoColor=white" alt="Share on WhatsApp"></a>
+  <a href="https://t.me/share/url?url=https%3A%2F%2Fgithub.com%2FTFFVanta%2FMingos-Uncensored-Ai&text=Mingo%27s%20Uncensored%20AI%3A%20private%2C%20all-in-one%20uncensored%20AI%20that%20runs%20on%20your%20own%20PC"><img src="https://img.shields.io/badge/Share_on-Telegram-26A5E4?logo=telegram&logoColor=white" alt="Share on Telegram"></a>
+</p>
+
+Or just copy the link: **https://github.com/TFFVanta/Mingos-Uncensored-Ai**
+
+Want to post about it somewhere? [SHARE.md](SHARE.md) has ready-made posts for Reddit, Hacker News, X and Discord.
 
 ## Credits
 

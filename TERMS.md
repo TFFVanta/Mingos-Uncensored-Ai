@@ -63,4 +63,4 @@ use applies to that copy.
 
 ## 10. Contact
 
-Questions about these terms: open an issue on the project's GitHub repository.
+Questions about these terms: open an issue at https://github.com/TFFVanta/Mingos-Uncensored-Ai/issues.

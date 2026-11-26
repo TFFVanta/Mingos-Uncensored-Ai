@@ -5,8 +5,8 @@ Thanks for helping! Mingo's Uncensored AI was created by Mingo, and contribution
 ## Getting started
 
 ```powershell
-git clone <this repository>
-cd <folder>
+git clone https://github.com/TFFVanta/Mingos-Uncensored-Ai.git
+cd Mingos-Uncensored-Ai
 npm ci
 npm test
 npm start          # then open http://localhost:3000

@@ -433,6 +433,16 @@
         <div style="font-size:12.5px; margin-top:8px"><a href="/legal/TERMS" target="_blank">Terms of Use</a> · <a href="/legal/ACCEPTABLE_USE" target="_blank">Acceptable Use</a> · <a href="/legal/PRIVACY" target="_blank">Privacy</a> · <a href="/legal/DISCLAIMER" target="_blank">Disclaimer</a> · <a href="/legal/THIRD_PARTY_NOTICES" target="_blank">Third-party notices</a> · <a href="/legal/LICENSE" target="_blank">MIT License</a></div>
         <small class="help">Built on open-source projects including Ollama, ComfyUI, SDXL, SearXNG, Pyodide, Playwright, whisper.cpp and Piper.</small>
       </div>
+
+      <h3>Share it</h3>
+      <div class="about">
+        <div style="font-size:13px; margin-bottom:8px">Enjoying it? Tell a friend, or give it a ⭐ on <a href="https://github.com/TFFVanta/Mingos-Uncensored-Ai" target="_blank">GitHub</a>.</div>
+        <div class="row" style="margin-bottom:8px">
+          <input type="text" id="shareUrl" readonly value="https://github.com/TFFVanta/Mingos-Uncensored-Ai" style="flex:1; font-size:12.5px">
+          <button class="primary" id="shareCopy">Copy link</button>
+        </div>
+        <div class="row" id="shareButtons" style="gap:6px"></div>
+      </div>
     </div>
 
     <div class="tabbody" id="tab-appearance">
@@ -2927,6 +2937,28 @@ $("mode").onchange();
 $("vsWrap").hidden = !settings.compare;
 if (chats.length) { current = chats[0]; render(); } else newChat();
 $("useLibrary").checked = settings.useLibrary;
+
+// ----- sharing: copy the link, or open a pre-filled post in a new window (nothing is sent until you post it) -----
+const SHARE_URL = "https://github.com/TFFVanta/Mingos-Uncensored-Ai";
+const SHARE_TEXT = "Mingo's Uncensored AI: private, all-in-one uncensored AI that runs on your own PC (chat, agents, pictures, voice)";
+{
+  const e = encodeURIComponent, u = e(SHARE_URL), t = e(SHARE_TEXT);
+  const targets = [
+    ["Reddit", `https://www.reddit.com/submit?url=${u}&title=${t}`],
+    ["X", `https://twitter.com/intent/tweet?text=${t}&url=${u}`],
+    ["Hacker News", `https://news.ycombinator.com/submitlink?u=${u}&t=${e("Mingo's Uncensored AI: a private, local AI workspace for Windows")}`],
+    ["Bluesky", `https://bsky.app/intent/compose?text=${e(SHARE_TEXT + " " + SHARE_URL)}`],
+    ["LinkedIn", `https://www.linkedin.com/sharing/share-offsite/?url=${u}`],
+    ["Facebook", `https://www.facebook.com/sharer/sharer.php?u=${u}`],
+    ["WhatsApp", `https://wa.me/?text=${e(SHARE_TEXT + " " + SHARE_URL)}`],
+    ["Telegram", `https://t.me/share/url?url=${u}&text=${t}`],
+  ];
+  $("shareButtons").innerHTML = targets.map(([n, href]) => `<a class="ghost sm" style="text-decoration:none" href="${esc(href)}" target="_blank" rel="noopener">${esc(n)}</a>`).join("");
+}
+$("shareCopy").onclick = async () => {
+  try { await navigator.clipboard.writeText(SHARE_URL); } catch { $("shareUrl").select(); document.execCommand("copy"); }
+  toast("Link copied. Paste it anywhere to share.");
+};
 
 // ----- first run: age check, terms, and a quick readiness check -----
 const TERMS_VERSION = "2026-11-26";   // bump when the Terms or Acceptable Use Policy change

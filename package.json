@@ -5,6 +5,9 @@
   "description": "Private, all-in-one uncensored AI workspace for Windows: chat, AI agent swarms, pictures, a document library and voice, running entirely on your own PC.",
   "keywords": ["uncensored-ai", "abliterated", "local-llm", "ollama", "private-ai", "ai-agents", "stable-diffusion", "offline-ai", "windows"],
   "author": "Mingo",
+  "homepage": "https://github.com/TFFVanta/Mingos-Uncensored-Ai",
+  "repository": { "type": "git", "url": "https://github.com/TFFVanta/Mingos-Uncensored-Ai.git" },
+  "bugs": { "url": "https://github.com/TFFVanta/Mingos-Uncensored-Ai/issues" },
   "license": "MIT",
   "main": "server.js",
   "scripts": {

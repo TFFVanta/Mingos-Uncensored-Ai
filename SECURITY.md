@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Please **don't open a public issue** for security problems. Instead, report them privately through
-GitHub: go to the repository's **Security** tab and choose **Report a vulnerability**.
+GitHub: go to the repository's [Security tab](https://github.com/TFFVanta/Mingos-Uncensored-Ai/security) and choose **Report a vulnerability**.
 
 Please include what you found, how to reproduce it, and what an attacker could do with it. You'll get
 a reply as soon as possible, and credit in the release notes if you'd like.
