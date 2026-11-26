@@ -32,6 +32,7 @@ Licenses below are as declared by each project at the time of writing. Always ch
 | [ControlNet canny SDXL small](https://huggingface.co/diffusers/controlnet-canny-sdxl-1.0-small) | Outline guide | OpenRAIL++ |
 | [IP-Adapter](https://huggingface.co/h94/IP-Adapter) | Style reference | Apache-2.0 |
 | [CLIP ViT-H-14 (LAION)](https://huggingface.co/laion/CLIP-ViT-H-14-laion2B-s32B-b79K) | Image encoder for IP-Adapter | MIT |
+| [BiRefNet](https://github.com/ZhengPeng7/BiRefNet) ([ComfyUI package](https://huggingface.co/Comfy-Org/BiRefNet)) | Background removal (optional) | MIT |
 | [Whisper base.en (ggml)](https://huggingface.co/ggerganov/whisper.cpp) | Voice typing | MIT |
 | [Piper voices (en_US lessac)](https://huggingface.co/rhasspy/piper-voices) | Read-aloud voice | MIT (see the voice's model card for its training data) |
 | [nomic-embed-text](https://huggingface.co/nomic-ai/nomic-embed-text-v1.5) | Library search | Apache-2.0 |

@@ -2,6 +2,26 @@
 
 All notable changes to Mingo's Uncensored AI. Versions follow [Semantic Versioning](https://semver.org).
 
+## [1.1.0] - 2026-11-26
+
+### Added
+- **Update notice:** when a newer version is on GitHub, a bar offers **Update now**, which installs it and
+  restarts the app. Your chats, settings, models and workspace aren't touched. Turn the check off in
+  ⚙ Settings → General → Updates.
+- **Chat folders:** create folders, drag chats into them, rename, collapse.
+- **Export a chat as PDF** (or Markdown) from each chat's ⋯ menu.
+- **Edit part of a picture:** paint over an area and describe what should go there (inpainting). Only the
+  painted area changes.
+- **Remove a picture's background** (BiRefNet, optional in the installer, 425 MB).
+
+### Fixed
+- Agent teams finish far more cleanly. Tool calls that small models write in a broken way (several calls
+  at once, a missing brace, Python-style JSON, other common formats) are now read correctly, and any that
+  still can't be read are repaired automatically and marked "auto-repaired".
+- Agents could fail to save files when the workspace folder was given with forward slashes or a different
+  letter case. Full paths that point into the workspace now work too.
+- An agent asking for a tool it doesn't have is now told which teammate has it.
+
 ## [1.0.1] - 2026-11-26
 
 ### Fixed

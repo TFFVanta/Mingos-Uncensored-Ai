@@ -7,7 +7,7 @@
 #   Install.cmd -DryRun                 show what would happen, change nothing
 #   Install.cmd -Components core,voice  install only these
 #
-# Components: core, pictures, pictures-plus, voice, search, sandbox, ocr
+# Components: core, pictures, pictures-plus, cutout, voice, search, sandbox, ocr
 param(
   [string[]]$Components,
   [switch]$Yes,
@@ -36,6 +36,7 @@ $Catalog = [ordered]@{
   "core"          = @{ Label = "Core app + chat model ($Model) + library search model"; MB = 5300; Recommended = $true }
   "pictures"      = @{ Label = "Pictures: ComfyUI image engine + SDXL model";             MB = 9000; Recommended = $true }
   "pictures-plus" = @{ Label = "Picture extras: fast mode, outline, style, upscale";      MB = 3900; Recommended = $false }
+  "cutout"        = @{ Label = "Background removal for pictures (BiRefNet)";            MB = 425;  Recommended = $false }
   "voice"         = @{ Label = "Private voice: Whisper typing + Piper read-aloud";        MB = 250;  Recommended = $true }
   "search"        = @{ Label = "Private web search: SearXNG (needs Python 3.11)";         MB = 250;  Recommended = $true }
   "sandbox"       = @{ Label = "Code sandbox for agents: Pyodide + numpy/pandas/matplotlib"; MB = 30; Recommended = $true }
@@ -128,6 +129,7 @@ $Components = @($Components | ForEach-Object { $_ -split ',' } | ForEach-Object 
 foreach ($c in $Components) { if (-not $Catalog.Contains($c)) { Fail "Unknown component '$c'. Choose from: $($Catalog.Keys -join ', ')" } }
 if ($Components -notcontains "core") { $Components = @("core") + $Components }
 if ($Components -contains "pictures-plus" -and $Components -notcontains "pictures") { $Components += "pictures" }
+if ($Components -contains "cutout" -and $Components -notcontains "pictures") { $Components += "pictures" }
 $totalGB = ($Components | ForEach-Object { $Catalog[$_].MB } | Measure-Object -Sum).Sum / 1024
 $freeGB = (Get-PSDrive ($App.Substring(0, 1))).Free / 1GB
 Say ("`n  Installing: {0}" -f ($Components -join ", ")) "White"
@@ -185,6 +187,10 @@ if ($Components -contains "pictures-plus") {
     Move-Item (Get-ChildItem "$dl\ipa" -Directory | Select-Object -First 1).FullName $node
     Remove-Item "$dl\ipadapter.zip", "$dl\ipa" -Recurse -Force; Say "  IP-Adapter add-on installed" "Green"
   }
+}
+if ($Components -contains "cutout") {
+  Step "Background removal"
+  Save-HF "Comfy-Org/BiRefNet" "background_removal/birefnet.safetensors" "$Models\background_removal\birefnet.safetensors"
 }
 if ($Components -contains "voice") {
   Step "Private voice"

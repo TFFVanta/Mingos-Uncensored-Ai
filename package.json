@@ -1,6 +1,6 @@
 {
   "name": "mingos-uncensored-ai",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "private": true,
   "description": "Private, all-in-one uncensored AI workspace for Windows: chat, AI agent swarms, pictures, a document library and voice, running entirely on your own PC.",
   "keywords": ["uncensored-ai", "abliterated", "local-llm", "ollama", "private-ai", "ai-agents", "stable-diffusion", "offline-ai", "windows"],

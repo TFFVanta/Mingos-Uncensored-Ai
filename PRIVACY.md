@@ -35,6 +35,8 @@ backup copy you control.
 | Online voice typing (if selected instead of the private default) | Your voice recording | Your browser's speech service (Microsoft for Edge, Google for Chrome) |
 | "Online" read-aloud voices (marked as such) | The text being read | Microsoft |
 | Downloading models and tools | Normal download requests | Ollama, Hugging Face, GitHub, npm, PyPI |
+| Checking for updates (on by default; turn off in **⚙ Settings → General → Updates**) | When the app starts, one request asking for the latest release number. Nothing about you or your chats | GitHub |
+| Installing an update (only when you click **Update now**) | A normal download of the new version | GitHub |
 | MCP tool servers you turn on | Whatever that server is designed to do | Depends on the server; check its documentation |
 
 The private defaults (Whisper voice typing, Piper read-aloud, sandboxed code and local models) don't

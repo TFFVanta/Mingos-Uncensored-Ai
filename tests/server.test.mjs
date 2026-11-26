@@ -19,7 +19,8 @@ const tool = async (name, args) => (await fetch(`${BASE}/tools/${name}`, { metho
 
 before(async () => {
   server = spawn(process.execPath, [path.join(ROOT, "server.js")], {
-    env: { ...process.env, PORT: String(PORT), LC_DATA_DIR: DATA, LC_WORKSPACE: WORK, OLLAMA_HOST: "http://127.0.0.1:9" },
+    // Forward slashes on purpose: a workspace path written that way once made every file "outside" it.
+    env: { ...process.env, PORT: String(PORT), LC_DATA_DIR: DATA, LC_WORKSPACE: WORK.replace(/\\/g, "/"), OLLAMA_HOST: "http://127.0.0.1:9" },
     stdio: "ignore",
   });
   for (let i = 0; i < 50; i++) {
@@ -82,6 +83,11 @@ test("agents' files stay inside the workspace", async () => {
   assert.ok(abs.result?.error, "absolute path not read from the real disk");
   assert.equal(fs.existsSync(path.join(tmp, "escape.txt")), false);
   assert.equal((await tool("delete_file", { path: "." })).result.error, "The workspace folder itself can't be deleted.");
+  // A full path that points into the workspace is used as-is (models often write one).
+  const full = await tool("write_file", { path: path.join(WORK, "full.txt"), content: "ok" });
+  assert.equal(full.ok, true);
+  assert.equal(fs.readFileSync(path.join(WORK, "full.txt"), "utf8"), "ok");
+  assert.equal((await tool("write_file", { path: "./dot.txt", content: "ok" })).ok, true);
 });
 
 test("agents can't reach this PC or the local network", async () => {

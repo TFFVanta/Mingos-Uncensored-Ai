@@ -37,6 +37,13 @@ This guide covers everyday use. For installing the app and its optional features
 
 **Chats** are listed on the left. Search them, 📌 pin favorites, double-click a title to rename it.
 
+**Folders:** click **+ New folder** at the bottom of the list. Put a chat in one by dragging it onto the
+folder, or with its **⋯** menu → **Move to folder**. Click a folder to open or close it; ✎ renames it and ✕
+deletes it (its chats are kept).
+
+**Export a chat:** its **⋯** menu → **Markdown** (a text file) or **PDF** (opens the print dialog: choose
+**Save as PDF**). Pictures are included.
+
 **Attachments:** click 📎, drag files onto the window, or paste. Text, code and PDF files are read in full
 (scanned PDFs with OCR). Pictures are seen by vision models; for other models, any text in the
 picture is read with OCR instead.
@@ -54,6 +61,13 @@ picture is read with OCR instead.
 1. Describe the picture, then click **🖼** (or type `/image a castle on a hill at dawn`).
 2. The chat model writes a detailed prompt, then the image engine draws it.
 3. Under the picture: **🔁 New picture**, **⬆ Upscale 2×** (sharper, 2048 × 2048) or **📋 Copy prompt**.
+
+**Edit part of a picture:** click **✏️ Edit part**, paint over what should change, describe what goes
+there ("a red umbrella"), then **Apply**. Only the painted area changes; the edited copy appears under
+the original.
+
+**Remove the background:** click **✂️ Remove background** to cut out the subject as a PNG with a
+transparent background. This needs the optional "Background removal" part of the installer.
 
 **Guide it with your own picture:** attach a picture *before* clicking 🖼. In
 **⚙ Settings → General → Pictures** choose whether it's used as a **style reference** (copies the look),
@@ -104,7 +118,7 @@ Change both in **⚙ Settings → General → Voice**.
 
 | Tab | What's there |
 |---|---|
-| **General** | Context length, auto titles, picture options, voice, export and import |
+| **General** | Context length, auto titles, picture options, voice, export and import, updates |
 | **Look** | Themes, accent color, text size, chat width |
 | **Presets** | Edit personalities and their expectations (used by **Quality check**) |
 | **Models** | What's installed, download or delete models, suggested models |
@@ -119,6 +133,9 @@ Change both in **⚙ Settings → General → Voice**.
 - **Thinking models can pause for a while.** Watch their thoughts in the 🧠 AI view.
 - **Back up your chats** with **⚙ Settings → General → Export everything**.
 - **Everything is saved** in `data\store.json`, with a backup copy up to an hour old.
+- **Updates:** when a new version is out, a bar at the top offers **Update now**. It installs the new
+  version and restarts; your chats, settings, models and workspace stay as they are. If you started the
+  app from `Start.cmd`, the restarted app runs in the background: close it from the app window.
 
 ## Troubleshooting
 

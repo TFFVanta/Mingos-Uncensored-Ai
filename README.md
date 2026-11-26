@@ -24,7 +24,7 @@
 
 # Mingo's Uncensored AI
 
-**Created by Mingo.** · [MIT License](LICENSE) · Version 1.0.1 · For adults (18+)
+**Created by Mingo.** · [MIT License](LICENSE) · Version 1.1.0 · For adults (18+)
 
 📖 **New here? Read the [user guide](INSTRUCTIONS.md)** for how to chat, make pictures, run agent swarms and more.
 
@@ -125,7 +125,7 @@ Short MP4s of real use (waiting time sped up and marked): [documents + AI view](
 ## Features
 
 - **Chat** with any Ollama model: presets (Coder, Writer, Roleplay…), memory, edit/regenerate,
-  compare two models side by side, file/PDF/image attachments, 6 themes.
+  compare two models side by side, file/PDF/image attachments, folders, Markdown/PDF export, 6 themes.
 - **🧠 AI view**: see the model's reasoning, every step it takes, and exactly what it was given.
 - **Quality check**: replies are reviewed against each preset's expectations and fixed if needed.
 - **Agent swarms**: 🐝 Team, 👑 Lead and ⚖️ Debate modes with an editable roster of agents.
@@ -133,10 +133,12 @@ Short MP4s of real use (waiting time sped up and marked): [documents + AI view](
   browser (Playwright + Edge), pictures, your document library, OCR, and MCP tool servers.
   Risky actions ask for approval first (configurable).
 - **Pictures** with SDXL via ComfyUI: fast mode (SDXL-Lightning), style reference (IP-Adapter),
-  outline guide (ControlNet canny), 2× upscaling (Real-ESRGAN).
+  outline guide (ControlNet canny), 2× upscaling (Real-ESRGAN), editing part of a picture (inpainting)
+  and background removal (BiRefNet).
 - **📚 Library**: add documents and search them by meaning (nomic-embed-text).
 - **Private voice**: speech-to-text with whisper.cpp, read-aloud with Piper.
-- **Desktop app**: its own window and icon; closing it shuts everything down.
+- **Desktop app**: its own window and icon; closing it shuts everything down. Tells you when an update
+  is out and installs it in one click.
 
 ## Requirements
 

@@ -10,7 +10,7 @@ const { spawn } = require("child_process");
 const PORT = +process.env.PORT || 3000;
 const OLLAMA = process.env.OLLAMA_HOST || "http://127.0.0.1:11434";
 // LC_DATA_DIR / LC_WORKSPACE let the test suite run against throwaway folders instead of your real data.
-const DATA_DIR = process.env.LC_DATA_DIR || path.join(__dirname, "data");
+const DATA_DIR = path.resolve(process.env.LC_DATA_DIR || path.join(__dirname, "data"));
 const PKG = JSON.parse(fs.readFileSync(path.join(__dirname, "package.json"), "utf8"));
 const VERSION = PKG.version;
 const APP_NAME = "Mingo's Uncensored AI";
@@ -175,7 +175,10 @@ const imageExtras = () => ({
   upscale: hasModel("upscale_models", UPSCALER),
   style: hasModel("ipadapter", "ip-adapter_sdxl_vit-h.safetensors") && hasModel("clip_vision", "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors")
     && fs.existsSync(path.join(COMFY_DIR, "ComfyUI", "custom_nodes", "ComfyUI_IPAdapter_plus")),
+  removebg: hasModel("background_removal", BG_MODEL) && fs.existsSync(path.join(COMFY_DIR, "ComfyUI", "comfy_extras", "nodes_bg_removal.py")),
+  inpaint: true,
 });
+const BG_MODEL = "birefnet.safetensors";
 
 // Text-to-picture, optionally fast (SDXL-Lightning), guided by a reference picture's style (IP-Adapter)
 // and/or its outlines (ControlNet canny). o.refImage is a file name already uploaded to the image engine.
@@ -221,6 +224,38 @@ const upscaleWorkflow = (image) => ({
   "4": { class_type: "ImageScaleBy", inputs: { image: ["3", 0], upscale_method: "lanczos", scale_by: 0.5 } },
   "9": { class_type: "SaveImage", inputs: { filename_prefix: "localchat_up", images: ["4", 0] } },
 });
+// Repaint only the part of a picture you painted over. mask: white where it should change, black elsewhere.
+// The result is pasted back through the (softened) mask, so everything you didn't paint stays exactly as it was.
+function inpaintWorkflow(o, image, mask) {
+  const seed = crypto.randomInt(0, 2 ** 47);
+  const fast = o.fast && imageExtras().fast;
+  const wf = {
+    "4": { class_type: "CheckpointLoaderSimple", inputs: { ckpt_name: CKPT } },
+    "1": { class_type: "LoadImage", inputs: { image } },
+    "2": { class_type: "LoadImageMask", inputs: { image: mask, channel: "red" } },
+    "11": { class_type: "GrowMask", inputs: { mask: ["2", 0], expand: 6, tapered_corners: true } },
+    "12": { class_type: "VAEEncodeForInpaint", inputs: { pixels: ["1", 0], vae: ["4", 2], mask: ["11", 0], grow_mask_by: 8 } },
+  };
+  let model = ["4", 0], clip = ["4", 1];
+  if (fast) { wf["10"] = { class_type: "LoraLoader", inputs: { model, clip, lora_name: LIGHTNING, strength_model: 1, strength_clip: 1 } }; model = ["10", 0]; clip = ["10", 1]; }
+  wf["6"] = { class_type: "CLIPTextEncode", inputs: { text: String(o.prompt || "").slice(0, 4000), clip } };
+  wf["7"] = { class_type: "CLIPTextEncode", inputs: { text: String(o.negative || DEFAULT_NEG).slice(0, 2000), clip } };
+  wf["3"] = { class_type: "KSampler", inputs: { seed, steps: fast ? 6 : 30, cfg: fast ? 1.5 : 7, sampler_name: fast ? "euler" : "dpmpp_2m", scheduler: fast ? "sgm_uniform" : "karras", denoise: 1, model, positive: ["6", 0], negative: ["7", 0], latent_image: ["12", 0] } };
+  wf["8"] = { class_type: "VAEDecode", inputs: { samples: ["3", 0], vae: ["4", 2] } };
+  wf["13"] = { class_type: "GrowMask", inputs: { mask: ["2", 0], expand: 10, tapered_corners: true } };
+  wf["14"] = { class_type: "ImageCompositeMasked", inputs: { destination: ["1", 0], source: ["8", 0], x: 0, y: 0, resize_source: false, mask: ["13", 0] } };
+  wf["9"] = { class_type: "SaveImage", inputs: { filename_prefix: "localchat_edit", images: ["14", 0] } };
+  return wf;
+}
+// Cut out the subject (BiRefNet) and save it as a PNG with a transparent background.
+const removeBgWorkflow = (image) => ({
+  "1": { class_type: "LoadImage", inputs: { image } },
+  "40": { class_type: "LoadBackgroundRemovalModel", inputs: { bg_removal_name: BG_MODEL } },
+  "41": { class_type: "RemoveBackground", inputs: { bg_removal_model: ["40", 0], image: ["1", 0] } },
+  "42": { class_type: "InvertMask", inputs: { mask: ["41", 0] } },   // JoinImageWithAlpha expects ComfyUI's inverted mask convention
+  "43": { class_type: "JoinImageWithAlpha", inputs: { image: ["1", 0], alpha: ["42", 0] } },
+  "9": { class_type: "SaveImage", inputs: { filename_prefix: "localchat_cutout", images: ["43", 0] } },
+});
 async function comfyUpload(buf, name) {
   const form = new FormData();
   form.append("image", new Blob([buf]), name);
@@ -230,7 +265,8 @@ async function comfyUpload(buf, name) {
   return (await r.json()).name;
 }
 const NODE_MSG = { "4": "Loading the image model…", "10": "Loading fast mode…", "21": "Studying the reference picture's style…", "30": "Tracing the reference picture's outlines…",
-  "6": "Reading the prompt…", "7": "Reading the prompt…", "3": "Drawing…", "8": "Finishing the image…", "9": "Saving…", "2": "Loading the upscaler…", "1": "Loading the picture…" };
+  "6": "Reading the prompt…", "7": "Reading the prompt…", "3": "Drawing…", "8": "Finishing the image…", "9": "Saving…", "2": "Loading the upscaler…", "1": "Loading the picture…",
+  "12": "Preparing the area to repaint…", "14": "Blending it in…", "40": "Loading the cut-out model…", "41": "Finding the subject…", "43": "Removing the background…" };
 
 async function handleImage(req, res) {
   const opts = JSON.parse((await readBody(req, 20e6)).toString("utf8") || "{}");
@@ -254,7 +290,7 @@ function minorSexualContent(text) {
 
 // Draws one picture, reporting progress through send(); used by the 🖼 button and by agents.
 async function generateImage(opts, send, job = {}) {
-  if (opts.kind !== "upscale" && minorSexualContent(opts.prompt)) {
+  if (opts.kind !== "upscale" && opts.kind !== "removebg" && minorSexualContent(opts.prompt)) {
     log("warn", "blocked a picture request that combined minors with sexual content");
     return send({ stage: "error", error: `This picture request was blocked. ${APP_NAME} never creates sexual images involving minors.` });
   }
@@ -271,10 +307,25 @@ async function generateImage(opts, send, job = {}) {
     ws = new WebSocket(`ws://127.0.0.1:${COMFY_PORT}/ws?clientId=${clientId}`);
     await new Promise((ok, bad) => { ws.onopen = ok; ws.onerror = () => bad(new Error("Couldn't connect to the image engine")); });
     let wf;
-    if (opts.kind === "upscale") {
+    // Edits work only on pictures this app made (files in data\images), never on arbitrary files.
+    const savedPicture = () => {
       const src = path.join(IMG_DIR, path.basename(String(opts.image || "")));
       if (!/^[\w-]+\.png$/.test(path.basename(src)) || !fs.existsSync(src)) throw new Error("That picture wasn't found.");
+      return src;
+    };
+    if (opts.kind === "upscale") {
+      const src = savedPicture();
       wf = upscaleWorkflow(await comfyUpload(fs.readFileSync(src), "lc_up_" + path.basename(src)));
+    } else if (opts.kind === "removebg") {
+      if (!imageExtras().removebg) throw new Error("Background removal isn't installed. Run the installer and add it.");
+      const src = savedPicture();
+      wf = removeBgWorkflow(await comfyUpload(fs.readFileSync(src), "lc_bg_" + path.basename(src)));
+    } else if (opts.kind === "inpaint") {
+      const src = savedPicture();
+      if (!opts.maskB64) throw new Error("Paint over the part you want to change first.");
+      if (!String(opts.prompt || "").trim()) throw new Error("Describe what should go in the painted area.");
+      const stamp = Date.now();
+      wf = inpaintWorkflow(opts, await comfyUpload(fs.readFileSync(src), `lc_in_${stamp}.png`), await comfyUpload(Buffer.from(opts.maskB64, "base64"), `lc_mask_${stamp}.png`));
     } else {
       if (opts.refImageB64) opts.refImage = await comfyUpload(Buffer.from(opts.refImageB64, "base64"), `lc_ref_${Date.now()}.jpg`);
       wf = workflow(opts);
@@ -283,7 +334,7 @@ async function generateImage(opts, send, job = {}) {
     const d = await r.json();
     if (!r.ok || d.error) throw new Error(d.error?.message || JSON.stringify(d.node_errors || d).slice(0, 300));
     promptId = d.prompt_id;
-    send({ stage: "queued", message: "Queued…", seed: wf["3"].inputs.seed });
+    send({ stage: "queued", message: "Queued…", seed: wf["3"]?.inputs?.seed });
     const images = await new Promise((ok, bad) => {
       const out = [];
       ws.onmessage = (ev) => {
@@ -310,7 +361,7 @@ async function generateImage(opts, send, job = {}) {
       fs.writeFileSync(path.join(IMG_DIR, name), buf);
       saved.push(name);
     }
-    send({ stage: "done", images: saved, seed: wf["3"].inputs.seed });
+    send({ stage: "done", images: saved, seed: wf["3"]?.inputs?.seed });
   } catch (e) {
     send({ stage: "error", error: e.message });
   } finally {
@@ -321,14 +372,20 @@ async function generateImage(opts, send, job = {}) {
 // Everything agents touch on disk is confined to LocalChat\workspace.
 const dns = require("dns").promises;
 const net = require("net");
-const WS = process.env.LC_WORKSPACE || path.join(__dirname, "workspace");
+const WS = path.resolve(process.env.LC_WORKSPACE || path.join(__dirname, "workspace"));
 fs.mkdirSync(WS, { recursive: true });
 const WS_REAL = fs.realpathSync(WS);
 
 function wsPath(p = ".") {
-  const rel = String(p || ".").replace(/^([a-zA-Z]:)?[/\\]+/, "").replace(/^workspace[/\\]/i, "");
+  let given = String(p || ".").trim().replace(/^["']|["']$/g, "");
+  // A full path that points into the workspace (models often write one): use the part after it.
+  const abs = path.isAbsolute(given) && path.resolve(given);
+  if (abs && abs.toLowerCase().startsWith(WS.toLowerCase() + path.sep)) given = abs.slice(WS.length + 1);
+  const rel = given.replace(/^~[/\\]/, "").replace(/^([a-zA-Z]:)?[/\\]+/, "").replace(/^(\.[/\\])+/, "").replace(/^workspace[/\\]/i, "");
   const full = path.resolve(WS, rel);
-  const inside = (f, root) => f === root || f.startsWith(root + path.sep);
+  // Windows paths aren't case-sensitive, so compare them that way.
+  const norm = (f) => (process.platform === "win32" ? f.toLowerCase() : f);
+  const inside = (f, root) => norm(f) === norm(root) || norm(f).startsWith(norm(root) + path.sep);
   if (!inside(full, WS)) throw new Error("Agents can only use files inside the workspace folder.");
   // Also resolve links, so a shortcut inside the workspace can't point outside it.
   let real = full;
@@ -812,6 +869,83 @@ function json(res, code, obj) {
   res.end(JSON.stringify(obj));
 }
 
+// ================= updates =================
+// The page asks for this only while "Check for updates" is on. It contacts GitHub's public API and sends
+// nothing about you. Installing replaces the app's own files and never touches data, workspace or models.
+const REPO = "TFFVanta/Mingos-Uncensored-Ai";
+const verParts = (v) => String(v).replace(/^v/i, "").split(/[.+-]/).slice(0, 3).map((x) => parseInt(x, 10) || 0);
+const isNewer = (a, b) => { const [x, y] = [verParts(a), verParts(b)]; for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] > y[i]; return false; };
+let updateCache = null, updating = false;
+async function checkUpdate(force) {
+  if (!force && updateCache && Date.now() - updateCache.at < 6 * 3600e3) return updateCache.info;
+  const r = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
+    headers: { accept: "application/vnd.github+json", "user-agent": "mingos-uncensored-ai-updater" }, signal: AbortSignal.timeout(10000),
+  });
+  if (!r.ok) throw new Error(`GitHub answered ${r.status}. Try again later.`);
+  const d = await r.json();
+  const latest = String(d.tag_name || "").replace(/^v/i, "");
+  const info = { current: VERSION, latest, tag: d.tag_name, available: isNewer(latest, VERSION), url: d.html_url, notes: String(d.body || "").slice(0, 5000), published: d.published_at, git: fs.existsSync(path.join(__dirname, ".git")) };
+  updateCache = { at: Date.now(), info };
+  return info;
+}
+const run = (cmd, args, opts = {}) => new Promise((resolve) => {
+  const p = spawn(cmd, args, { windowsHide: true, ...opts });
+  let out = "";
+  p.stdout?.on("data", (d) => (out += d)); p.stderr?.on("data", (d) => (out += d));
+  p.on("error", (e) => resolve({ code: -1, out: e.message }));
+  p.on("close", (code) => resolve({ code, out }));
+});
+async function installUpdate() {
+  if (updating) throw new Error("An update is already being installed.");
+  updating = true;
+  try {
+    const info = await checkUpdate(true);
+    if (!info.available) return { ok: true, version: VERSION, upToDate: true };
+    const depsBefore = JSON.stringify(PKG.dependencies || {});
+    if (info.git) {
+      // A git copy: fast-forward to the release, refusing if you've changed files yourself.
+      const f = await run("git", ["-C", __dirname, "fetch", "--tags", "origin"]);
+      if (f.code !== 0) throw new Error("Couldn't download the update with git: " + f.out.trim().slice(0, 300));
+      const m = await run("git", ["-C", __dirname, "merge", "--ff-only", info.tag]);
+      if (m.code !== 0) throw new Error("Your copy has changes of its own, so it can't update automatically. Run git pull yourself. " + m.out.trim().slice(0, 300));
+    } else {
+      // A downloaded copy: fetch the release's source zip over HTTPS and copy its files over the app's.
+      const tmp = fs.mkdtempSync(path.join(require("os").tmpdir(), "mingo-update-"));
+      try {
+        const r = await fetch(`https://codeload.github.com/${REPO}/zip/refs/tags/${encodeURIComponent(info.tag)}`, { headers: { "user-agent": "mingos-uncensored-ai-updater" }, signal: AbortSignal.timeout(120000) });
+        if (!r.ok) throw new Error(`Download failed (${r.status}).`);
+        const zip = path.join(tmp, "update.zip");
+        fs.writeFileSync(zip, Buffer.from(await r.arrayBuffer()));
+        // Windows' own tar reads zip files. (Git's tar, if it comes first on PATH, would read "C:" as a network host.)
+        const winTar = path.join(process.env.SystemRoot || "C:\\Windows", "System32", "tar.exe");
+        const x = await run(fs.existsSync(winTar) ? winTar : "tar", ["-xf", zip, "-C", tmp]);
+        if (x.code !== 0) throw new Error("Couldn't unpack the update: " + x.out.trim().slice(0, 300));
+        const top = fs.readdirSync(tmp).map((n) => path.join(tmp, n)).find((p) => fs.statSync(p).isDirectory());
+        if (!top || !fs.existsSync(path.join(top, "server.js")) || !fs.existsSync(path.join(top, "package.json"))) throw new Error("The download doesn't look like this app.");
+        // The release holds only the app's own files (data, models and settings aren't in it), so copying
+        // adds and replaces files without deleting anything of yours.
+        fs.cpSync(top, __dirname, { recursive: true, force: true });
+      } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+    }
+    const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "package.json"), "utf8"));
+    if (JSON.stringify(pkg.dependencies || {}) !== depsBefore) {
+      const npm = path.join(path.dirname(process.execPath), process.platform === "win32" ? "npm.cmd" : "npm");
+      const n = await run(fs.existsSync(npm) ? npm : "npm", ["install", "--omit=dev", "--no-audit", "--no-fund"], { cwd: __dirname, shell: process.platform === "win32" });
+      if (n.code !== 0) log("warn", "npm install after update failed:", n.out.slice(0, 500));
+    }
+    log("info", `updated from ${VERSION} to ${pkg.version}`);
+    updateCache = null;
+    return { ok: true, version: pkg.version };
+  } finally { updating = false; }
+}
+// Start a fresh copy of the server (new code), then stop this one. The page reconnects by itself.
+function restartServer() {
+  const child = spawn(process.execPath, process.argv.slice(1), { cwd: __dirname, env: { ...process.env, LC_RESTARTED: "1" }, detached: true, stdio: "ignore", windowsHide: true });
+  child.unref();
+  server.close();
+  setTimeout(() => process.exit(0), 200);
+}
+
 // A secret the page gets when it loads. Private endpoints require it, so code running in the
 // sandbox (which can't see it) can't reach your chats, the tools, or Ollama.
 const UI_TOKEN = crypto.randomBytes(24).toString("hex");
@@ -836,6 +970,16 @@ async function handleRequest(req, res) {
 
     // ---- health and version (used by the launcher and installer) ----
     if (pathname === "/health") return json(res, 200, { ok: true, app: APP_NAME, version: VERSION });
+    // ---- updates (only when the page asks: the "Check for updates" setting) ----
+    if (pathname === "/update/check") {
+      try { return json(res, 200, await checkUpdate(url.searchParams.get("force") === "1")); }
+      catch (e) { return json(res, 200, { current: VERSION, error: e.message }); }
+    }
+    if (pathname === "/update/install" && req.method === "POST") {
+      try { return json(res, 200, await installUpdate()); }
+      catch (e) { log("warn", "update failed:", e.message); return json(res, 200, { ok: false, error: e.message }); }
+    }
+    if (pathname === "/update/restart" && req.method === "POST") { json(res, 200, { ok: true }); return restartServer(); }
     // ---- legal documents, readable inside the app ----
     const legal = pathname.match(/^\/legal\/(LICENSE|TERMS|PRIVACY|ACCEPTABLE_USE|THIRD_PARTY_NOTICES|DISCLAIMER)$/);
     if (legal) {
@@ -1021,7 +1165,8 @@ async function handleRequest(req, res) {
     res.end("Not found");
 }
 
-http
+let listenTries = 0;
+const server = http
   .createServer((req, res) => handleRequest(req, res).catch((e) => {
     log("error", `${req.method} ${req.url.split("?")[0]}:`, e);
     if (!res.headersSent) json(res, 500, { error: "Something went wrong. Details are in data\\server.log." });
@@ -1029,6 +1174,8 @@ http
   }))
   .on("error", (err) => {
     if (err.code === "EADDRINUSE") {
+      // Restarting after an update: the old copy may need a moment to let go of the port.
+      if (process.env.LC_RESTARTED && listenTries++ < 40) return setTimeout(() => server.listen(PORT, "127.0.0.1"), 250);
       console.log(`${APP_NAME} is already running at http://localhost:${PORT}`);
       process.exit(0);
     }

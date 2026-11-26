@@ -41,6 +41,22 @@
   .convo button.pinned { filter: none; }
   .convo button:not(.pinned)[data-pin] { filter: grayscale(1); }
   .convo button[data-del]:hover { color: var(--danger); }
+  .folder { display: flex; align-items: center; gap: 4px; padding: 7px 8px 5px 8px; margin-top: 4px; border-radius: 6px; cursor: pointer; color: var(--text); font-size: 13px; font-weight: 600; user-select: none; }
+  .folder:hover { background: var(--panel2); }
+  .folder .fname { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .folder .count { color: var(--muted); font-weight: 400; font-size: 12px; }
+  .folder button { background: none; border: 0; color: var(--muted); opacity: 0; padding: 0 3px; font-size: 12px; }
+  .folder:hover button { opacity: 1; }
+  .folder.drop, .group.drop { outline: 2px dashed var(--accent); outline-offset: -2px; }
+  .infolder { padding-left: 22px; }
+  .newfolder { background: none; border: 0; color: var(--muted); font-size: 12px; padding: 2px 10px 6px; cursor: pointer; }
+  .newfolder:hover { color: var(--text); }
+  #chatMenu { position: fixed; z-index: 30; min-width: 190px; background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 4px; box-shadow: 0 8px 28px rgba(0,0,0,.4); }
+  #chatMenu[hidden] { display: none; }
+  #chatMenu button { display: block; width: 100%; text-align: left; background: none; border: 0; color: var(--text); padding: 7px 10px; border-radius: 5px; font-size: 13px; cursor: pointer; }
+  #chatMenu button:hover { background: var(--panel); }
+  #chatMenu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
+  #chatMenu .mlabel { font-size: 11px; color: var(--muted); padding: 4px 10px 2px; text-transform: uppercase; letter-spacing: .05em; }
   .side-foot { border-top: 1px solid var(--line); padding: 10px 12px; }
   .credit { font-size: 11px; color: var(--muted); text-align: center; margin-top: 8px; }
   .credit b { color: var(--text); font-weight: 600; }
@@ -67,6 +83,7 @@
   .ghost.danger:hover:not(:disabled) { color: var(--danger); border-color: var(--danger); }
   .ghost.sm { padding: 1px 8px; font-size: 12px; }
   .primary { background: var(--accent); color: #0b1220; border: 0; border-radius: 6px; padding: 5px 12px; font-weight: 600; }
+  .primary:disabled { opacity: .45; cursor: not-allowed; }
   #system { display: none; padding: 10px 16px; border-bottom: 1px solid var(--line); }
   #system.open { display: block; }
   #system textarea { width: 100%; min-height: 70px; resize: vertical; }
@@ -134,6 +151,19 @@
   #ctxMeter.warn { color: var(--warn); }
   #dropzone { position: absolute; inset: 0; background: color-mix(in srgb, var(--bg) 80%, transparent); border: 3px dashed var(--accent); display: none; align-items: center; justify-content: center; font-size: 20px; z-index: 5; pointer-events: none; }
   #dropzone.show { display: flex; }
+  #editor { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.7); display: flex; align-items: center; justify-content: center; padding: 20px; }
+  #editor[hidden] { display: none; }
+  .edbox { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; max-width: min(1100px, 96vw); max-height: 94vh; }
+  .edhead { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+  .edstage { min-height: 0; flex: 1; display: flex; justify-content: center; overflow: hidden; }
+  #edCanvas { max-width: 100%; max-height: calc(94vh - 130px); border-radius: 8px; cursor: crosshair; touch-action: none; }
+  .edtools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .edtools input[type=text] { flex: 1; min-width: 220px; }
+  .genimg.cutout { background: repeating-conic-gradient(#8884 0 25%, transparent 0 50%) 0 0 / 24px 24px; }
+  #updateBar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 14px; border-bottom: 1px solid var(--line); background: var(--panel2); font-size: 13.5px; }
+  #updateBar[hidden] { display: none; }
+  #updateBar .grow { flex: 1; min-width: 200px; }
+  #updateNotes { white-space: pre-wrap; max-height: 50vh; overflow: auto; font-size: 13px; background: var(--code); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin: 8px 0 0; }
   #toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%) translateY(20px); background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 9px 14px; opacity: 0; pointer-events: none; transition: .2s; z-index: 20; max-width: 80vw; box-shadow: 0 6px 24px rgba(0,0,0,.35); }
   #toast.show { opacity: 1; transform: translateX(-50%); }
 
@@ -239,6 +269,7 @@
   .step { border-left: 2px solid var(--line); padding: 3px 0 3px 10px; margin: 4px 0; }
   .step.error, .step.denied { border-left-color: var(--danger); }
   .step.done { border-left-color: var(--ok); }
+  .step.skipped { border-left-color: var(--muted); opacity: .7; }
   .step.approval { border-left-color: var(--warn); }
   .step .note { font-size: 12px; }
   .sres summary { font-size: 12.5px; color: var(--muted); }
@@ -272,6 +303,13 @@
     <div class="credit">Mingo's Uncensored AI · created by <b>Mingo</b></div></div>
 </aside>
 <main>
+  <div id="updateBar" hidden role="status">
+    <span class="grow" id="updateText"></span>
+    <button class="ghost" type="button" id="updateNotesBtn">What's new</button>
+    <button class="primary" type="button" id="updateNow">Update now</button>
+    <button class="ghost" type="button" id="updateLater" title="Don't remind me about this version">Skip this version</button>
+    <div id="updateNotes" hidden style="flex-basis:100%"></div>
+  </div>
   <header>
     <label title="Chat with one model, or hand the task to a swarm of agents">Mode <select id="mode">
       <option value="chat">💬 Chat</option>
@@ -404,10 +442,18 @@
       <div class="row" style="margin-top:8px">
         <button class="ghost" id="exportAll">Export everything</button>
         <button class="ghost" id="exportChat">Export this chat (Markdown)</button>
+        <button class="ghost" id="exportChatPdf">Export this chat (PDF)</button>
         <button class="ghost" id="importBtn">Import backup…</button>
         <input type="file" id="importFile" accept=".json,application/json" hidden>
       </div>
       <small class="help">Importing adds the backup's chats to yours, and replaces your presets and memory if the backup has them.</small>
+
+      <h3>Updates</h3>
+      <div class="field">
+        <label><input type="checkbox" id="checkUpdates"> Check for updates</label>
+        <small class="help">When the app starts, it asks GitHub whether a newer version is out. It sends nothing about you or your chats, and nothing is installed until you click Update now.</small>
+        <div class="row" style="margin-top:6px"><button class="ghost" type="button" id="checkUpdatesNow">Check now</button> <span class="note" id="updateStatus"></span></div>
+      </div>
 
       <h3>About</h3>
       <div class="about">
@@ -600,6 +646,20 @@
   </div>
 </div>
 <div id="toast"></div>
+<div id="chatMenu" hidden role="menu"></div>
+<div id="editor" hidden role="dialog" aria-label="Edit part of the picture">
+  <div class="edbox">
+    <div class="edhead"><b>✏️ Edit part of the picture</b><span class="note">Paint over what should change, then describe what goes there.</span></div>
+    <div class="edstage"><canvas id="edCanvas"></canvas></div>
+    <div class="edtools">
+      <label class="note">Brush <input type="range" id="edBrush" min="10" max="160" value="60"></label>
+      <button class="ghost" type="button" id="edClear">Clear</button>
+      <input type="text" id="edPrompt" placeholder="What should go there? e.g. a red umbrella" maxlength="400">
+      <button class="ghost" type="button" id="edCancel">Cancel</button>
+      <button class="primary" type="button" id="edApply" disabled>Apply</button>
+    </div>
+  </div>
+</div>
 
 <div id="welcome" hidden>
   <div class="wbox">
@@ -799,6 +859,7 @@ let settings = Object.assign({
   mode: "chat", approvals: "risky", agentSteps: 8, debateRounds: 2, debaters: ["analyst", "skeptic", "creative"],
   toolGroups: { files: true, code: true, web: true, pictures: true, library: true, mcp: true }, wikipedia: true, braveKey: "",
   codeSandbox: true, searchEngine: "searxng", fastPictures: true, refMode: "style", voiceEngine: "local", useLibrary: false,
+  checkUpdates: true, skipVersion: "", folders: [],
 }, store.settings || {});
 settings.toolGroups = { files: true, code: true, web: true, pictures: true, library: true, mcp: true, ...settings.toolGroups };
 if (!settings.voicePicked) settings.voice = "piper";   // the private voice is the default until you choose another
@@ -946,22 +1007,55 @@ $("exportAll").onclick = () => {
   saveAll();
   download(`local-chat-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(store, null, 1), "application/json");
 };
-$("exportChat").onclick = () => {
-  const c = current;
-  const lines = [`# ${c.title}`, "", `*Preset: ${presetById(c.presetId).name} · exported ${new Date().toLocaleString()}*`, ""];
+// One chat as readable parts: who spoke, the text, and any pictures. Used by both exports.
+function chatParts(c) {
+  const parts = [];
   for (const m of c.messages) {
-    if (m.role === "user") {
-      lines.push("## You", "", m.content);
-      for (const a of m.attachments || []) lines.push(`*Attached: ${a.name}*`);
-    } else if (m.kind === "image") {
-      lines.push("## AI (picture)", "", m.image?.file ? `![picture](data/images/${m.image.file})` : "*(no picture)*", "", `Prompt: ${m.image?.prompt || ""}`);
+    if (m.role === "user") parts.push({ who: "You", text: m.content || "", attachments: (m.attachments || []).map((a) => a.name) });
+    else if (m.kind === "image") parts.push({ who: "AI (picture)", text: m.image?.prompt ? `Prompt: ${m.image.prompt}` : "", pictures: m.image?.file ? [m.image.file] : [] });
+    else if (Array.isArray(m.compare)) {
+      m.compare.forEach((x, k) => parts.push({ who: `AI (${x.model || "model " + (k + 1)})${m.chosen === k ? " · kept" : ""}`, text: splitThinking(x).content || "" }));
     } else {
-      lines.push(`## AI${m.opts ? ` (${m.opts.model})` : ""}`, "", splitThinking(m).content);
+      const swarm = m.agents?.length ? ` · ${m.agents.length} agents` : "";
+      parts.push({ who: `AI${m.opts?.model ? ` (${m.opts.model})` : ""}${swarm}`, text: splitThinking(m).content || "", pictures: m.pictures || [] });
     }
+  }
+  return parts;
+}
+function exportMarkdown(c = current) {
+  const lines = [`# ${c.title}`, "", `*Preset: ${presetById(c.presetId).name} · exported ${new Date().toLocaleString()} from Mingo's Uncensored AI*`, ""];
+  for (const p of chatParts(c)) {
+    lines.push(`## ${p.who}`, "", p.text);
+    for (const a of p.attachments || []) lines.push(`*Attached: ${a}*`);
+    for (const f of p.pictures || []) lines.push(`![picture](data/images/${f})`);
     lines.push("");
   }
   download(safeName(c.title) + ".md", lines.join("\n"), "text/markdown");
-};
+}
+// PDF: lay the chat out as a clean page in a hidden frame and open the print dialog ("Save as PDF").
+function exportPdf(c = current) {
+  const body = chatParts(c).map((p) => `<section><h2>${esc(p.who)}</h2>${md(p.text)}
+    ${(p.attachments || []).map((a) => `<p class="att">📎 ${esc(a)}</p>`).join("")}
+    ${(p.pictures || []).map((f) => `<img src="${location.origin}/images/${encodeURIComponent(f)}">`).join("")}</section>`).join("");
+  const doc = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(c.title)}</title><style>
+    body { font: 14px/1.55 "Segoe UI", system-ui, sans-serif; color: #1f1f1f; margin: 32px 40px; }
+    h1 { font-size: 22px; margin: 0 0 4px; } .meta { color: #6b6b6b; font-size: 12px; margin-bottom: 18px; }
+    section { border-top: 1px solid #ddd; padding: 10px 0 4px; break-inside: avoid-page; }
+    h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: #2563eb; margin: 0 0 4px; }
+    pre { background: #f3f3f1; border: 1px solid #e2e0da; border-radius: 6px; padding: 8px 10px; white-space: pre-wrap; font-size: 12px; }
+    code { font-family: Consolas, monospace; } .copy { display: none; } img { max-width: 60%; border-radius: 8px; margin: 6px 0; }
+    .att { color: #6b6b6b; font-size: 12px; margin: 2px 0; }
+  </style></head><body><h1>${esc(c.title)}</h1><div class="meta">Exported ${esc(new Date().toLocaleString())} from Mingo's Uncensored AI</div>${body}</body></html>`;
+  const f = document.createElement("iframe");
+  f.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden";
+  document.body.appendChild(f);
+  f.contentDocument.open(); f.contentDocument.write(doc); f.contentDocument.close();
+  const go = () => { f.contentWindow.focus(); f.contentWindow.print(); setTimeout(() => f.remove(), 60000); };
+  const imgs = [...f.contentDocument.images];
+  Promise.all(imgs.map((i) => i.complete ? 0 : new Promise((ok) => { i.onload = i.onerror = ok; }))).then(go);
+}
+$("exportChat").onclick = () => exportMarkdown();
+$("exportChatPdf").onclick = () => exportPdf();
 $("importBtn").onclick = () => $("importFile").click();
 $("importFile").onchange = async () => {
   const f = $("importFile").files[0];
@@ -1231,30 +1325,115 @@ function deleteChat(id) {
 function chatMatches(c, q) {
   return !q || c.title.toLowerCase().includes(q) || c.messages.some((m) => (m.content || "").toLowerCase().includes(q));
 }
+// Folders live in settings.folders ([{id, name, open}]); a chat's folder is chat.folder.
+const folderOf = (c) => settings.folders.find((f) => f.id === c.folder);
 function renderSidebar() {
   const q = $("search").value.trim().toLowerCase();
   const list = chats.filter((c) => chatMatches(c, q));
-  const row = (c) => `<div class="convo ${c.id === current?.id ? "active" : ""}" data-id="${c.id}">
+  const row = (c, inner) => `<div class="convo ${c.id === current?.id ? "active" : ""}${inner ? " infolder" : ""}" data-id="${c.id}" draggable="true">
     <span title="Double-click to rename">${esc(presetById(c.presetId).icon + " " + c.title)}</span>
     <button data-pin="${c.id}" class="${c.pinned ? "pinned" : ""}" title="${c.pinned ? "Unpin" : "Pin to top"}">📌</button>
+    <button data-menu="${c.id}" title="Move to a folder, export…">⋯</button>
     <button data-del="${c.id}" title="Delete chat">✕</button></div>`;
-  const pinned = list.filter((c) => c.pinned), rest = list.filter((c) => !c.pinned);
+  const pinned = list.filter((c) => c.pinned);
+  const loose = list.filter((c) => !c.pinned && !folderOf(c));
   let html = "";
-  if (pinned.length) html += `<div class="group">Pinned</div>` + pinned.map(row).join("") + (rest.length ? `<div class="group">Chats</div>` : "");
-  html += rest.map(row).join("");
+  if (pinned.length) html += `<div class="group">Pinned</div>` + pinned.map((c) => row(c)).join("");
+  for (const f of settings.folders) {
+    const inside = list.filter((c) => !c.pinned && c.folder === f.id);
+    if (q && !inside.length) continue;
+    const open = f.open || !!q;
+    html += `<div class="folder" data-folder="${f.id}" title="Click to open or close · drop chats here">
+      <span>${open ? "▾" : "▸"} 📁</span><span class="fname">${esc(f.name)}</span><span class="count">${inside.length}</span>
+      <button data-frename="${f.id}" title="Rename folder">✎</button><button data-fdel="${f.id}" title="Delete folder (its chats are kept)">✕</button></div>`;
+    if (open) html += inside.map((c) => row(c, true)).join("");
+  }
+  if (loose.length && (pinned.length || settings.folders.length)) html += `<div class="group" data-folder="">Chats</div>`;
+  html += loose.map((c) => row(c)).join("");
+  if (!q) html += `<button class="newfolder" type="button" data-newfolder="1">+ New folder</button>`;
   $("convos").innerHTML = html || (q ? `<p class="note" style="padding:8px 10px">No chats match "${esc(q)}".</p>` : "");
+}
+function newFolder(chat) {
+  const name = prompt("Folder name", "New folder");
+  if (!name?.trim()) return;
+  const f = { id: "f" + Date.now().toString(36), name: name.trim().slice(0, 40), open: true };
+  settings.folders.push(f);
+  if (chat) { chat.folder = f.id; chat.pinned = false; }
+  saveAll(); renderSidebar();
+}
+function moveToFolder(chat, folderId) {
+  chat.folder = folderId || undefined;
+  if (folderId) { chat.pinned = false; const f = settings.folders.find((x) => x.id === folderId); if (f) f.open = true; }
+  saveAll(); renderSidebar();
 }
 $("search").oninput = renderSidebar;
 $("newChat").onclick = newChat;
 $("convos").onclick = (e) => {
-  if (e.target.dataset.del) return deleteChat(e.target.dataset.del);
-  if (e.target.dataset.pin) {
-    const c = chats.find((x) => x.id === e.target.dataset.pin);
+  const d = e.target.dataset;
+  if (d.del) return deleteChat(d.del);
+  if (d.pin) {
+    const c = chats.find((x) => x.id === d.pin);
     c.pinned = !c.pinned; saveAll(); return renderSidebar();
   }
+  if (d.menu) return openChatMenu(chats.find((x) => x.id === d.menu), e.target);
+  if (d.newfolder) return newFolder();
+  if (d.frename) {
+    const f = settings.folders.find((x) => x.id === d.frename);
+    const name = prompt("Rename folder", f.name);
+    if (name?.trim()) { f.name = name.trim().slice(0, 40); saveAll(); renderSidebar(); }
+    return;
+  }
+  if (d.fdel) {
+    const f = settings.folders.find((x) => x.id === d.fdel);
+    if (!confirm(`Delete the folder "${f.name}"? Its chats are kept and move back to the main list.`)) return;
+    settings.folders = settings.folders.filter((x) => x !== f);
+    chats.forEach((c) => { if (c.folder === f.id) delete c.folder; });
+    saveAll(); return renderSidebar();
+  }
+  const folder = e.target.closest(".folder");
+  if (folder) { const f = settings.folders.find((x) => x.id === folder.dataset.folder); f.open = !f.open; saveAll(); return renderSidebar(); }
   const row = e.target.closest(".convo");
   if (row) { current = chats.find((c) => c.id === row.dataset.id); selectedIdx = null; editingIdx = null; render(); }
 };
+// Drag a chat onto a folder (or onto "Chats" to take it out of its folder).
+$("convos").ondragstart = (e) => { const row = e.target.closest?.(".convo"); if (row) e.dataTransfer.setData("text/chat-id", row.dataset.id); };
+$("convos").ondragover = (e) => {
+  const t = e.target.closest?.("[data-folder]");
+  document.querySelectorAll("#convos .drop").forEach((x) => x !== t && x.classList.remove("drop"));
+  if (t && e.dataTransfer.types.includes("text/chat-id")) { e.preventDefault(); t.classList.add("drop"); }
+};
+$("convos").ondragleave = (e) => { if (!e.currentTarget.contains(e.relatedTarget)) document.querySelectorAll("#convos .drop").forEach((x) => x.classList.remove("drop")); };
+$("convos").ondrop = (e) => {
+  const t = e.target.closest?.("[data-folder]");
+  const chat = chats.find((c) => c.id === e.dataTransfer.getData("text/chat-id"));
+  if (!t || !chat) return;
+  e.preventDefault();
+  moveToFolder(chat, t.dataset.folder);
+};
+// The ⋯ menu on each chat: folders and export.
+function openChatMenu(chat, btn) {
+  const m = $("chatMenu");
+  const folders = settings.folders.filter((f) => f.id !== chat.folder)
+    .map((f) => `<button data-mv="${f.id}">📁 ${esc(f.name)}</button>`).join("");
+  m.innerHTML = `<div class="mlabel">Move to folder</div>${folders}
+    <button data-mnew="1">＋ New folder…</button>${chat.folder ? `<button data-mv="">↩ Take out of “${esc(folderOf(chat)?.name || "folder")}”</button>` : ""}
+    <hr><div class="mlabel">Export</div>
+    <button data-mexp="md">⬇ Markdown (.md)</button><button data-mexp="pdf">🖨 PDF (print or save)</button>`;
+  m.hidden = false;
+  const r = btn.getBoundingClientRect();
+  m.style.left = Math.min(r.left, innerWidth - m.offsetWidth - 8) + "px";
+  m.style.top = Math.min(r.bottom + 4, innerHeight - m.offsetHeight - 8) + "px";
+  m.onclick = (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    m.hidden = true;
+    if (b.dataset.mv !== undefined) moveToFolder(chat, b.dataset.mv);
+    else if (b.dataset.mnew) newFolder(chat);
+    else if (b.dataset.mexp === "md") exportMarkdown(chat);
+    else if (b.dataset.mexp === "pdf") exportPdf(chat);
+  };
+}
+document.addEventListener("mousedown", (e) => { if (!$("chatMenu").hidden && !e.target.closest("#chatMenu")) $("chatMenu").hidden = true; });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("chatMenu").hidden = true; });
 $("convos").ondblclick = (e) => {
   const row = e.target.closest(".convo");
   if (!row || e.target.tagName === "BUTTON") return;
@@ -1359,7 +1538,8 @@ function imageMessageHTML(m, i, sel, busy) {
   const [w, h] = (im.size || settings.imgSize).split("x").map(Number);
   let html = `<div class="imgcard">`;
   if (im.file) {
-    html += `<a href="/images/${esc(im.file)}" target="_blank" title="Open full size"><img class="genimg" src="/images/${esc(im.file)}" width="${w}" height="${h}" alt="${esc(im.prompt || "Generated picture")}"></a>`;
+    if (im.editOf) html += `<p class="note" style="margin:0 0 6px">${im.cutout ? "✂️ Background removed" : `✏️ Edited: “${esc(im.editPrompt || "")}”`}</p>`;
+    html += `<a href="/images/${esc(im.file)}" target="_blank" title="Open full size"><img class="genimg${im.cutout ? " cutout" : ""}" src="/images/${esc(im.file)}" width="${w}" height="${h}" alt="${esc(im.prompt || "Generated picture")}"></a>`;
   } else if (m.error) {
     html += `<p class="error">${esc(m.error)}</p>`;
   } else {
@@ -1374,10 +1554,12 @@ function imageMessageHTML(m, i, sel, busy) {
       `${im.seed != null ? `\n\n${w} × ${h} · ${im.steps} steps${im.fast ? " (fast mode)" : ""}${im.refMode ? ` · guided by your picture (${im.refMode})` : ""} · seed ${im.seed}${im.took ? ` · ${fmtMs(im.took)}` : ""}` : ""}</details>`;
   }
   html += `</div>`;
-  const canUp = im.file && !im.upscaled && imageEngine.extras?.upscale;
+  const canUp = im.file && !im.upscaled && !im.cutout && imageEngine.extras?.upscale;
   const acts = m.streaming ? "" : `<div class="acts">
-    <button type="button" data-act="regen" data-idx="${i}" ${busy ? "disabled" : ""} title="Make a new picture for the same request">🔁 New picture</button>
+    ${im.editOf ? "" : `<button type="button" data-act="regen" data-idx="${i}" ${busy ? "disabled" : ""} title="Make a new picture for the same request">🔁 New picture</button>`}
     ${canUp ? `<button type="button" data-act="upscale" data-idx="${i}" ${busy ? "disabled" : ""} title="Make a sharper version at twice the size (Real-ESRGAN)">⬆ Upscale 2×</button>` : ""}
+    ${im.file && !im.cutout && imageEngine.ready ? `<button type="button" data-act="inpaint" data-idx="${i}" ${busy ? "disabled" : ""} title="Paint over part of the picture and describe what should go there">✏️ Edit part</button>` : ""}
+    ${im.file && !im.cutout && imageEngine.extras?.removebg ? `<button type="button" data-act="removebg" data-idx="${i}" ${busy ? "disabled" : ""} title="Cut out the subject and make the background transparent">✂️ Remove background</button>` : ""}
     ${im.prompt ? `<button type="button" data-act="copy" data-idx="${i}">📋 Copy prompt</button>` : ""}</div>`;
   return `<div class="msg assistant${i === sel ? " sel" : ""}" data-idx="${i}"><div class="bubble" title="${settings.inspector ? "Click to inspect this reply" : ""}">${html}</div>${acts}</div>`;
 }
@@ -1429,6 +1611,8 @@ $("messages").onclick = async (e) => {
     switch (act.dataset.act) {
       case "approve": approvals.get(act.dataset.key)?.(act.dataset.v); break;
       case "upscale": upscalePicture(m); break;
+      case "inpaint": openEditor(m); break;
+      case "removebg": editPicture(m, { kind: "removebg" }); break;
       case "edit": editingIdx = idx; renderMessages(); break;
       case "cancel-edit": editingIdx = null; renderMessages(); break;
       case "save-edit": {
@@ -1709,7 +1893,7 @@ function systemFor(chat, passages = []) {
 }
 // The messages the model sees, in Ollama's format, for everything before message `idx`.
 function buildHistory(chat, idx, includeImages = true) {
-  return chat.messages.slice(0, idx).map((m) => {
+  return chat.messages.slice(0, idx).filter((m) => !m.image?.editOf).map((m) => {   // edited copies of a picture add nothing for the model
     if (m.role === "assistant") return { role: "assistant", content: splitThinking(m).content };
     const atts = m.attachments || [];
     let content = m.content;
@@ -2078,6 +2262,105 @@ async function upscalePicture(m) {
 }
 $("imgBtn").onclick = () => { if (!controller) askForImage(input.value.trim()); };
 
+// ----- picture editing: repaint a painted-over area, or remove the background -----
+// The result appears as a new picture right under the original, which stays as it was.
+async function editPicture(m, body) {
+  if (controller) return;
+  const chat = current, at = chat.messages.indexOf(m) + 1;
+  const cutout = body.kind === "removebg";
+  const reply = { role: "assistant", kind: "image", content: "", image: { status: "Getting ready…", size: m.image.size, editOf: m.image.file, cutout, editPrompt: body.prompt || "" } };
+  chat.messages.splice(at, 0, reply);
+  controller = new AbortController();
+  setBusy(true); reply.streaming = true; renderMessages();
+  const t0 = Date.now();
+  try {
+    const r = await fetch("/image", { method: "POST", signal: controller.signal, body: JSON.stringify({ ...body, image: m.image.file, fast: settings.fastPictures }) });
+    const reader = r.body.getReader(), dec = new TextDecoder();
+    let buf = "";
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split("\n"); buf = lines.pop();
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const d = JSON.parse(line);
+        if (d.stage === "error") throw new Error(d.error);
+        if (d.message) reply.image.status = d.message;
+        if (d.stage === "drawing") { reply.image.value = d.value; reply.image.max = d.max; }
+        if (d.stage === "done") reply.image.file = d.images[0];
+      }
+      renderMessages();
+    }
+    if (!reply.image.file) throw new Error("No picture came back.");
+    reply.image.took = Date.now() - t0;
+    toast(cutout ? "Background removed" : "Edited picture ready");
+  } catch (e) {
+    if (e.name === "AbortError") chat.messages.splice(chat.messages.indexOf(reply), 1);
+    else reply.error = (cutout ? "Removing the background failed: " : "Editing failed: ") + e.message;
+  } finally {
+    delete reply.streaming;
+    controller = null; setBusy(false); saveAll(true); renderMessages(); refreshImageEngine();
+  }
+}
+function openEditor(m) {
+  if (controller) return;
+  const ed = $("editor"), img = new Image();
+  img.onload = () => {
+    const W = img.naturalWidth, H = img.naturalHeight;
+    const view = $("edCanvas"), mask = document.createElement("canvas");
+    view.width = mask.width = W; view.height = mask.height = H;
+    const vc = view.getContext("2d"), mc = mask.getContext("2d");
+    mc.fillStyle = "#000"; mc.fillRect(0, 0, W, H);
+    let painted = false, drawing = false, last = null;
+    const redraw = () => {
+      vc.globalAlpha = 1; vc.drawImage(img, 0, 0);
+      vc.globalAlpha = 0.55; vc.drawImage(maskTint(mask), 0, 0); vc.globalAlpha = 1;
+    };
+    const pos = (e) => { const r = view.getBoundingClientRect(); return [(e.clientX - r.left) * (W / r.width), (e.clientY - r.top) * (H / r.height)]; };
+    const stroke = (p) => {
+      mc.strokeStyle = mc.fillStyle = "#fff"; mc.lineCap = mc.lineJoin = "round";
+      mc.lineWidth = +$("edBrush").value * (W / 1024);
+      mc.beginPath(); mc.moveTo(...(last || p)); mc.lineTo(...p); mc.stroke();
+      last = p; painted = true; redraw(); $("edApply").disabled = !$("edPrompt").value.trim();
+    };
+    view.onpointerdown = (e) => { drawing = true; last = null; view.setPointerCapture(e.pointerId); stroke(pos(e)); };
+    view.onpointermove = (e) => { if (drawing) stroke(pos(e)); };
+    view.onpointerup = view.onpointercancel = () => { drawing = false; last = null; };
+    $("edClear").onclick = () => { mc.fillStyle = "#000"; mc.fillRect(0, 0, W, H); painted = false; redraw(); $("edApply").disabled = true; };
+    $("edPrompt").oninput = () => { $("edApply").disabled = !(painted && $("edPrompt").value.trim()); };
+    $("edPrompt").onkeydown = (e) => { if (e.key === "Enter" && !$("edApply").disabled) $("edApply").click(); };
+    $("edCancel").onclick = () => { ed.hidden = true; };
+    $("edApply").onclick = () => {
+      const maskB64 = mask.toDataURL("image/png").split(",")[1];
+      const prompt = $("edPrompt").value.trim();
+      ed.hidden = true;
+      editPicture(m, { kind: "inpaint", maskB64, prompt: `${prompt}, seamless, matching the style and lighting of the picture`, negative: m.image.negative }).then(() => {
+        const r = current.messages[current.messages.indexOf(m) + 1];
+        if (r?.image) { r.image.editPrompt = prompt; saveAll(); renderMessages(); }
+      });
+    };
+    $("edPrompt").value = ""; $("edApply").disabled = true;
+    redraw(); ed.hidden = false; $("edPrompt").focus();
+  };
+  img.src = `/images/${encodeURIComponent(m.image.file)}`;
+}
+// The mask shown as a red overlay while you paint.
+function maskTint(mask) {
+  const c = document.createElement("canvas"); c.width = mask.width; c.height = mask.height;
+  const x = c.getContext("2d");
+  x.drawImage(maskAlpha(mask), 0, 0);
+  x.globalCompositeOperation = "source-in"; x.fillStyle = "#ff3b3b"; x.fillRect(0, 0, c.width, c.height);
+  return c;
+}
+function maskAlpha(mask) {
+  const c = document.createElement("canvas"); c.width = mask.width; c.height = mask.height;
+  const x = c.getContext("2d"), d = mask.getContext("2d").getImageData(0, 0, c.width, c.height);
+  for (let i = 0; i < d.data.length; i += 4) d.data[i + 3] = d.data[i];   // white → opaque, black → clear
+  x.putImageData(d, 0, 0);
+  return c;
+}
+
 $("form").onsubmit = async (e) => {
   e.preventDefault();
   if (controller) { controller.abort(); return; }
@@ -2205,21 +2488,77 @@ async function refreshMcp() {
 }
 
 // Models sometimes put raw line breaks inside JSON strings; escape them so the JSON still parses.
+// Reads the FIRST JSON object in a model's text, forgiving the slips small models make: several objects in a
+// row, a missing closing brace, raw new lines inside strings, trailing commas, 'single quotes' and Python's
+// True/False/None.
 function lenientJSON(text) {
-  const start = text.indexOf("{"), end = text.lastIndexOf("}");
-  if (start < 0 || end <= start) return null;
-  let s = text.slice(start, end + 1);
-  try { return JSON.parse(s); } catch {}
-  let out = "", inStr = false, escp = false;
-  for (const ch of s) {
+  text = String(text || "");
+  const start = text.indexOf("{");
+  if (start < 0) return null;
+  try { return JSON.parse(text.slice(start)); } catch {}
+  let out = "", inStr = false, q = '"', esc = false;
+  const stack = [];
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
     if (inStr) {
-      if (escp) { out += ch; escp = false; continue; }
-      if (ch === "\\") { out += ch; escp = true; continue; }
-      if (ch === '"') { inStr = false; out += ch; continue; }
+      if (esc) { esc = false; if (q === "'" && ch === "'") out = out.slice(0, -1) + "'"; else out += ch; continue; }
+      if (ch === "\\") { out += ch; esc = true; continue; }
+      if (ch === q) { inStr = false; out += '"'; continue; }
+      if (ch === '"') { out += '\\"'; continue; }
       out += ch === "\n" ? "\\n" : ch === "\r" ? "" : ch === "\t" ? "\\t" : ch;
-    } else { if (ch === '"') inStr = true; out += ch; }
+      continue;
+    }
+    if (ch === '"' || ch === "'") { inStr = true; q = ch; out += '"'; continue; }
+    if (ch === "{" || ch === "[") { stack.push(ch === "{" ? "}" : "]"); out += ch; continue; }
+    if (ch === "}" || ch === "]") { out = out.replace(/,\s*$/, ""); out += stack.pop() || ch; if (!stack.length) break; continue; }
+    if (/[A-Za-z]/.test(ch)) {
+      const word = text.slice(i).match(/^[A-Za-z_][A-Za-z0-9_]*/)[0];
+      const isKey = /^\s*:/.test(text.slice(i + word.length));   // {name: "x"} → {"name": "x"}
+      out += isKey ? `"${word}"` : { True: "true", False: "false", None: "null" }[word] || word;
+      i += word.length - 1; continue;
+    }
+    out += ch;
   }
+  if (inStr) out += '"';
+  out = out.replace(/,\s*$/, "") + stack.reverse().join("");
   try { return JSON.parse(out); } catch { return null; }
+}
+// Turns the many shapes models use for a tool call into {name, args}.
+function toolCallFrom(j) {
+  if (!j || typeof j !== "object") return null;
+  if (Array.isArray(j)) return toolCallFrom(j[0]);
+  const f = j.function || j.tool_call || j.call;
+  if (f && typeof f === "object") return toolCallFrom({ name: f.name, args: f.arguments ?? f.args ?? f.parameters });
+  const name = [j.name, j.tool, j.tool_name, j.action].find((v) => typeof v === "string" && v.trim());
+  if (!name) return null;
+  let args = j.args ?? j.arguments ?? j.parameters ?? j.input ?? j.action_input;
+  if (typeof args === "string") args = lenientJSON(args);
+  if (args == null) {   // arguments written next to the name: {"name": "web_search", "query": "..."}
+    args = { ...j };
+    for (const k of ["name", "tool", "tool_name", "action", "type", "id"]) delete args[k];
+  }
+  return { name: name.trim(), args: args && typeof args === "object" && !Array.isArray(args) ? args : {} };
+}
+// Last resort for a tool call that still can't be read: ask the model to rewrite it, with Ollama forcing
+// valid JSON whose name is one of the allowed tools.
+async function repairToolCall(model, raw, allowed, signal) {
+  if (!allowed.length || !raw.trim()) return null;
+  const r = await fetch("/api/chat", {
+    method: "POST", signal,
+    body: JSON.stringify({
+      model, stream: false,
+      format: { type: "object", properties: { name: { type: "string", enum: allowed }, args: { type: "object" } }, required: ["name", "args"] },
+      options: { temperature: 0, num_ctx: 4096 },
+      messages: [
+        { role: "system", content: "You repair broken tool calls. Reply with only the corrected call as JSON: {\"name\": \"tool_name\", \"args\": {...}}. Keep every argument value exactly as written." },
+        { role: "user", content: `Allowed tools: ${allowed.join(", ")}\n\nBroken tool call:\n${raw.slice(0, 6000)}\n\nIf it contains several calls, keep only the first one.` },
+      ],
+    }),
+  });
+  if (!r.ok) return null;
+  const d = await r.json().catch(() => null);
+  const call = toolCallFrom(lenientJSON(d?.message?.content || ""));
+  return call && allowed.includes(call.name) ? call : null;
 }
 const extractFinal = (t) => {
   const m = t.match(/<final>\s*([\s\S]*?)\s*(?:<\/final>|$)/i);
@@ -2243,20 +2582,21 @@ function parseAgentReplyRaw(text, allowed) {
   const tool = text.match(/<tool>\s*([\s\S]*?)\s*(?:<\/tool>|$)/i);
   const finalTag = /<final>/i.test(text);
   if (tool && !(finalTag && text.search(/<final>/i) < text.search(/<tool>/i))) {
-    const j = lenientJSON(tool[1]);
-    if (j?.name) {
-      const args = j.args || j.arguments || j.parameters || {};
+    const extra = (text.match(/<tool>/gi) || []).length > 1;   // several calls written at once: run the first
+    const call = toolCallFrom(lenientJSON(tool[1]));
+    if (call) {
+      const { name, args } = call;
       // Code or file text given as a fenced block instead of inside the JSON: use the block.
       const block = text.match(/```(\w*)\n([\s\S]*?)```/);
-      if (j.name === "run_code" && !args.code && block) { args.code = block[2]; args.language ||= block[1] || "python"; }
-      if (j.name === "write_file" && args.content == null && block) args.content = block[2];
-      return { tool: j.name, args };
+      if (name === "run_code" && !args.code && block) { args.code = block[2]; args.language ||= block[1] || "python"; }
+      if (name === "write_file" && args.content == null && block) args.content = block[2];
+      return { tool: name, args, extra };
     }
-    return { tool: "invalid", args: { raw: tool[1].slice(0, 300) } };
+    return { tool: "invalid", args: { raw: tool[1].slice(0, 300) }, fullRaw: tool[1], extra };
   }
   if (finalTag) return { final: extractFinal(text) };
-  const bare = !text.includes("<final") && lenientJSON(text);
-  if (bare?.name && allowed.includes(bare.name)) return { tool: bare.name, args: bare.args || {} };
+  const bare = !text.includes("<final") && toolCallFrom(lenientJSON(text));
+  if (bare && allowed.includes(TOOL_ALIASES[bare.name] && !allowed.includes(bare.name) ? TOOL_ALIASES[bare.name] : bare.name)) return { tool: bare.name, args: bare.args };
   return { final: text.trim() };
 }
 function agentSystem(spec, tools, max, extraDesc = {}, extra = "") {
@@ -2355,7 +2695,15 @@ async function runAgent(ctx, spec, task, { tools = [], extraTools = {}, extraDes
     const st = splitThinking(out);
     if (st.thinking) a.thinking += (a.thinking ? "\n\n— next step —\n\n" : "") + st.thinking;
     a.live = ""; a.liveThinking = "";
-    const parsed = last ? { final: extractFinal(st.content) } : parseAgentReply(st.content, allowed);
+    let parsed = last ? { final: extractFinal(st.content) } : parseAgentReply(st.content, allowed);
+    if (parsed.tool === "invalid") {
+      a.status = "fixing its tool call"; swarmRedraw(ctx);
+      const fixed = await repairToolCall(ctx.model, parsed.fullRaw, allowed, ctx.signal).catch((e) => { if (e.name === "AbortError") throw e; return null; });
+      if (fixed) {
+        parsed = { tool: fixed.name, args: fixed.args, extra: parsed.extra, repaired: true };
+        ev(ctx.reply, `${a.icon} ${a.name}: repaired a broken tool call`, fixed.name);
+      }
+    }
     if (parsed.final != null) {
       a.final = parsed.final || "(no result)";
       a.messages.push({ role: "assistant", content: st.content });
@@ -2364,13 +2712,19 @@ async function runAgent(ctx, spec, task, { tools = [], extraTools = {}, extraDes
       swarmRedraw(ctx);
       return a.final;
     }
-    a.messages.push({ role: "assistant", content: /<\/tool>/.test(st.content) ? st.content : st.content + "</tool>" });
-    const s = { tool: parsed.tool, args: parsed.args, status: "running", sig: parsed.tool + JSON.stringify(parsed.args).replace(/#[^"]*/g, "") };
+    // Keep the conversation tidy: the model sees its call written correctly, which teaches it the format.
+    if (parsed.tool === "invalid") a.messages.push({ role: "assistant", content: /<\/tool>/.test(st.content) ? st.content : st.content + "</tool>" });
+    else {
+      const before = /<tool>/i.test(st.content) ? st.content.split(/<tool>/i)[0] : "";
+      a.messages.push({ role: "assistant", content: `${before}<tool>${JSON.stringify({ name: parsed.tool, args: parsed.args })}</tool>` });
+    }
+    const s = { tool: parsed.tool, args: parsed.args, status: "running", repaired: !!parsed.repaired, sig: parsed.tool + JSON.stringify(parsed.args).replace(/#[^"]*/g, "") };
     a.steps.push(s);
-    let result = null;
+    let result = null, repeatCall = false;
     const sig = parsed.tool + JSON.stringify(parsed.args).replace(/#[^"]*/g, "");
     if (parsed.tool === "invalid") result = { error: 'Your tool call wasn\'t valid JSON. Use exactly: <tool>{"name": "tool_name", "args": {...}}</tool>' };
     else if (a.steps.slice(0, -1).some((x) => x.sig === sig)) {
+      repeatCall = true;   // not run again: its result is already in the conversation
       const prev = a.steps.slice(0, -1).find((x) => x.sig === sig);
       result = { error: prev.status === "error"
         ? "This exact call already failed. Running it again will fail the same way: change it first (fix the error shown in its result), or give your <final> result and say it didn't work."
@@ -2378,7 +2732,12 @@ async function runAgent(ctx, spec, task, { tools = [], extraTools = {}, extraDes
     }
     else if (!allowed.includes(parsed.tool)) {
       const repeat = a.steps.filter((x) => x.tool === parsed.tool).length > 1;
-      result = { error: `You don't have a tool called "${parsed.tool}". Your tools: ${allowed.join(", ") || "none"}.` +
+      // Point the agent at a teammate who has the tool, instead of leaving it to guess.
+      const owners = roster.filter((r) => toolsFor(r).includes(parsed.tool)).map((r) => r.name);
+      const hint = !owners.length ? "" : allowed.includes("delegate")
+        ? ` ${owners[0]} has it: hand that part over with <tool>{"name": "delegate", "args": {"agent": "${owners[0]}", "task": "..."}}</tool>`
+        : ` ${owners.join(" or ")} has it: do the part your own tools allow, and say in your <final> result what's left for ${owners[0]}.`;
+      result = { error: `You don't have a tool called "${parsed.tool}". Your tools: ${allowed.join(", ") || "none"}.${hint}` +
         (repeat ? " You've tried this before. Stop trying it: do your part with your own tools, or give your <final> result now and say what's left for a teammate." : "") };
     }
     else {
@@ -2400,10 +2759,12 @@ async function runAgent(ctx, spec, task, { tools = [], extraTools = {}, extraDes
     }
     s.result = result;
     const codeFailed = parsed.tool === "run_code" && result && !result.error && (result.exit_code !== 0 || result.timed_out);
-    s.status = s.status === "denied" ? "denied" : result?.error || codeFailed ? "error" : "done";
+    s.status = s.status === "denied" ? "denied" : repeatCall ? "skipped" : result?.error || codeFailed ? "error" : "done";
     if (codeFailed) result = { ...result, note: "THE CODE FAILED, so you have NO result from it. Read stderr, fix the code, and run it again. Never report numbers or charts from code that failed." };
     else if (parsed.tool === "run_code" && result && !result.error && !String(result.stdout || "").trim())
       result = { ...result, note: "The code printed nothing, so you don't know its results. If you need a number, add print() and run it again. Never guess a value the code didn't print." };
+    if (parsed.extra && result && typeof result === "object")
+      result = { ...result, note_calls: "You wrote several tool calls at once. Only the first one was run (this result). Write ONE call, wait for its result, then write the next." };
     if (parsed.tool === "make_picture" && result?.picture) ctx.reply.pictures.push(result.picture);
     if (parsed.tool === "write_file" && result?.path && !ctx.reply.files.includes(result.path)) ctx.reply.files.push(result.path);
     for (const f of [...(result?.files_written || []), ...(parsed.tool === "screenshot_page" && result?.path ? [result.path] : [])])
@@ -2537,7 +2898,7 @@ const wsUrl = (f) => "/workspace/" + String(f).split("/").map(encodeURIComponent
 function stepHTML(a, s, k) {
   const key = `${a.id}:${k}`;
   const info = TOOL_INFO[s.tool];
-  let h = `<div class="step ${s.status}"><span>${info?.icon || (s.tool === "delegate" ? "🤝" : "🔧")} <b>${esc(s.tool)}</b></span> <span class="note">${esc(argSummary(s.tool, s.args))}</span>`;
+  let h = `<div class="step ${s.status}"><span>${info?.icon || (s.tool === "delegate" ? "🤝" : "🔧")} <b>${esc(s.tool)}</b></span> <span class="note">${esc(argSummary(s.tool, s.args))}</span>${s.repaired ? ` <span class="note" title="The model wrote this call in a broken format, and the app repaired it automatically">· 🔧 auto-repaired</span>` : ""}`;
   if (s.status === "approval") {
     const a2 = s.args || {};
     const detail = s.tool === "run_code" ? a2.code : s.tool === "write_file" ? `${a2.path}\n\n${String(a2.content || "").slice(0, 3000)}` : s.tool === "web_search" ? `Search for: ${a2.query}\n\n(Sent to DuckDuckGo${settings.wikipedia ? " and Wikipedia" : ""}${settings.braveKey ? " and Brave" : ""})` : s.tool === "read_webpage" ? a2.url : JSON.stringify(a2, null, 1);
@@ -2574,7 +2935,10 @@ function swarmMessageHTML(m, i, sel, busy) {
   else if (m.error) h += `<p class="error">${esc(m.error)}</p>`;
   // Facts from the app itself, not the model: flag answers that may rest on actions that never happened.
   const steps = m.agents.flatMap((a) => a.steps);
-  const declined = steps.filter((s) => s.status === "denied"), failed = steps.filter((s) => s.status === "error" && TOOL_INFO[s.tool]);
+  // A failure counts only if that agent never got the same tool to work afterwards.
+  const recovered = (a, i) => a.steps.slice(i + 1).some((x) => x.tool === a.steps[i].tool && x.status === "done");
+  const declined = steps.filter((s) => s.status === "denied");
+  const failed = m.agents.flatMap((a) => a.steps.filter((s, i) => s.status === "error" && TOOL_INFO[s.tool] && !recovered(a, i)));
   if (!m.streaming && (declined.length || failed.length))
     h += `<div class="gate" style="color:var(--warn);border-color:color-mix(in srgb,var(--warn) 50%,transparent)">⚠️ ${[
       declined.length ? `You declined ${declined.length} action${declined.length > 1 ? "s" : ""} (${[...new Set(declined.map((s) => s.tool))].join(", ")})` : "",
@@ -2983,6 +3347,45 @@ $("wGo").onclick = () => {
   $("input").focus();
 };
 if (settings.accepted?.version !== TERMS_VERSION) showWelcome();
+
+// ----- updates: a notice when a newer release is on GitHub, and a one-click install -----
+let updateInfo = null;
+async function checkForUpdates(force = false) {
+  $("updateStatus").textContent = force ? "Checking…" : "";
+  try {
+    const info = await (await fetch("/update/check" + (force ? "?force=1" : ""))).json();
+    if (info.error) { $("updateStatus").textContent = "Couldn't check: " + info.error; return; }
+    updateInfo = info;
+    $("updateStatus").textContent = info.available ? `Version ${info.latest} is available.` : `You have the latest version (${info.current}).`;
+    if (info.available && (force || settings.skipVersion !== info.latest)) {
+      $("updateText").innerHTML = `🎉 <b>Version ${esc(info.latest)}</b> is available. You have ${esc(info.current)}.`;
+      $("updateNotes").textContent = info.notes || "No release notes.";
+      $("updateNotes").hidden = true;
+      $("updateNow").disabled = $("updateLater").disabled = false;
+      $("updateBar").hidden = false;
+    }
+  } catch { $("updateStatus").textContent = "Couldn't reach GitHub."; }
+}
+$("updateNotesBtn").onclick = () => { $("updateNotes").hidden = !$("updateNotes").hidden; };
+$("updateLater").onclick = () => { settings.skipVersion = updateInfo?.latest || ""; saveAll(); $("updateBar").hidden = true; };
+$("updateNow").onclick = async () => {
+  if ($("send").textContent === "Stop") return toast("Wait until the AI has finished, then update.");
+  $("updateNow").disabled = $("updateLater").disabled = true;
+  $("updateText").textContent = `Downloading and installing ${updateInfo.latest}… Your chats, settings and models stay as they are.`;
+  const r = await fetch("/update/install", { method: "POST" }).then((x) => x.json()).catch(() => ({ ok: false, error: "The app didn't answer." }));
+  if (!r.ok) { $("updateText").textContent = "The update didn't install: " + r.error; $("updateNow").disabled = $("updateLater").disabled = false; return; }
+  $("updateText").textContent = `Installed ${r.version}. Restarting…`;
+  await fetch("/update/restart", { method: "POST" }).catch(() => {});
+  for (let i = 0; i < 80; i++) {
+    await new Promise((ok) => setTimeout(ok, 500));
+    try { const h = await (await nativeFetch("/health")).json(); if (h.version === r.version) return location.reload(); } catch {}
+  }
+  $("updateText").textContent = `Installed ${r.version}. Close the app and open it again to finish.`;
+};
+$("checkUpdates").checked = settings.checkUpdates;
+$("checkUpdates").onchange = () => { settings.checkUpdates = $("checkUpdates").checked; saveAll(); if (settings.checkUpdates) checkForUpdates(); };
+$("checkUpdatesNow").onclick = () => checkForUpdates(true);
+if (settings.checkUpdates) setTimeout(() => checkForUpdates(), 4000);
 
 applyInspector();
 loadModels();
